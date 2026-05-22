@@ -1,60 +1,69 @@
-# Analytic-MPPI
+# Analytic-MPPI (PMR)
 
-A lightweight testbed for **Model Predictive Path Integral (MPPI)** control and
-new sampling techniques, using **analytic robot models** instead of a physics
-simulator. The goal is fast iteration on controller and sampler ideas without
-the overhead of MuJoCo / Isaac / Drake.
+A quick-iteration testbed for **Model Predictive Path Integral (MPPI)** control
+and new cost / sampling techniques. Currently codenamed **PMR** while the
+controller research happens here before the full system is built.
 
-## Why analytic models?
+The framework targets a morphology-agnostic controller (humanoid, quadruped),
+where MPC's per-robot tuning burden makes it impractical. MPPI works
+out-of-the-box on arbitrary robots, but converges slowly — the research goal
+is to fix that with better cost representations.
 
-Physics simulators are great for realism but slow to iterate on when the
-research question is about the *controller*, not the dynamics. Closed-form
-analytic models give:
+## Backend: MuJoCo in the loop
 
-- millisecond-scale rollouts → large MPPI batch sizes on a laptop CPU
-- deterministic, reproducible behavior
-- transparent dynamics (easy to differentiate, perturb, or extend)
-- no install/build friction
+PMR runs MuJoCo as its dynamics backend, with sample batches rolled out in
+parallel via [`mujoco.rollout.rollout`](https://mujoco.readthedocs.io/) — a
+multithreaded CPU primitive. No JAX, no `mjx`, no GPU. The point is to
+validate MPPI variants against real(-ish) physics with minimum infrastructure
+before moving to a full JAX/GPU stack.
 
-## Initial models
-
-| Model | State | Control | Use case |
-|---|---|---|---|
-| Unicycle / Dubins car | `(x, y, θ)` | `(v, ω)` | 2D navigation, obstacle avoidance |
-| Linear Inverted Pendulum (LIP) | `(x, ẋ)` per axis | CoP / step location | Humanoid walking, footstep planning |
-
-More models can be added under [analytic_mppi/dynamics/](analytic_mppi/dynamics/)
-by implementing the common dynamics interface.
+The dynamics interface is small (`Backend` protocol in
+[analytic_mppi/controllers/mppi.py](analytic_mppi/controllers/mppi.py)), so an
+analytic backend (closed-form LIP, RBD) can be added later behind the same
+seam.
 
 ## Stack
 
 - Python 3
-- NumPy (core numerics)
-- Matplotlib (plots + animation, headless-friendly)
-
-No GPU, no JIT, no simulator dependency.
+- NumPy + Matplotlib
+- `mujoco` (>= 3.2) Python bindings
 
 ## Repo layout
 
 ```
 analytic_mppi/
-  dynamics/       # analytic robot models (unicycle, LIP, ...)
-  controllers/    # MPPI core + sampling strategies
-  costs/          # reusable cost terms (quadratic, obstacle, terminal, ...)
-  viz/            # matplotlib plotting / animation helpers
-examples/         # runnable scripts wiring a model + controller + cost
-tests/            # unit tests for dynamics and controller pieces
+  dynamics/       # MujocoBackend + MJCF model files (unicycle.xml, ...)
+  controllers/    # MPPI core (vanilla today; variants TODO)
+  costs/          # reusable cost terms (goal-reach today)
+  viz/            # matplotlib trajectory + control plots
+examples/         # runnable scripts wiring backend + cost + controller
+tests/            # smoke + shape tests
 ```
 
 ## Getting started
 
 ```bash
 pip install -r requirements.txt
-python examples/<example>.py
+
+# Run the unicycle smoke example: drives a planar base from (0,0) to (2,2),
+# saves runs/unicycle_goal.png
+python examples/unicycle_goal.py
+
+# Unit / smoke tests
+pytest -v
 ```
 
-(Examples will be added as components land.)
+## First robot: a planar base ("unicycle")
+
+[analytic_mppi/dynamics/unicycle.xml](analytic_mppi/dynamics/unicycle.xml)
+is a 3-DOF planar base (`x`, `y`, `theta`) with three world-frame velocity
+actuators. It's a holonomic point mass with orientation — *not* a true
+nonholonomic unicycle. It exists only as a substrate to validate the MPPI
++ parallel-rollout machinery on a trivial problem before scaling to humanoid
+/ quadruped MJCF models.
 
 ## Status
 
-Scaffolding only. Dynamics, MPPI core, and samplers are not yet implemented.
+Vanilla MPPI, MuJoCo backend, goal-reach cost, planar base example, and
+smoke tests are in. Next: MPPI variants (new cost representations) and
+non-trivial robots (humanoid, quadruped).

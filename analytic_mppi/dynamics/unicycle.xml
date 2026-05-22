@@ -1,0 +1,47 @@
+<mujoco model="unicycle">
+  <!-- Planar 3-DOF base (x, y, theta) with 3 world-frame velocity actuators.
+       This is a holonomic point mass with orientation, NOT a true nonholonomic
+       unicycle. It exists only as a smoke-test substrate for the MPPI core +
+       mujoco.rollout machinery on a trivial problem. Replace with a proper
+       diff-drive or articulated robot when contact / kinematic constraints
+       become the research question. -->
+  <option timestep="0.02" integrator="implicit" gravity="0 0 0"/>
+
+  <visual>
+    <headlight diffuse="0.8 0.8 0.8" ambient="0.45 0.45 0.45" specular="0.1 0.1 0.1"/>
+    <global azimuth="135" elevation="-25" offwidth="1280" offheight="960"/>
+  </visual>
+
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.60 0.75 0.92" rgb2="0.90 0.95 1.00"
+             width="512" height="3072"/>
+    <texture type="2d" name="groundtex" builtin="checker"
+             rgb1="0.92 0.92 0.92" rgb2="0.55 0.55 0.55"
+             markrgb="0.10 0.10 0.10" mark="edge" width="300" height="300"/>
+    <material name="ground" texture="groundtex" texuniform="true"
+              texrepeat="8 8" reflectance="0.05"/>
+  </asset>
+
+  <worldbody>
+    <light name="top" pos="1 1 5" dir="0 0 -1" diffuse="0.7 0.7 0.7"
+           specular="0.1 0.1 0.1" castshadow="false"/>
+    <geom name="floor" type="plane" size="5 5 0.05" material="ground"/>
+    <camera name="topdown" pos="1 1 3.5" xyaxes="1 0 0 0 1 0" fovy="65"/>
+    <camera name="angled"  pos="3 -3 3" xyaxes="0.707 0.707 0 -0.408 0.408 0.816"/>
+
+    <body name="base" pos="0 0 0.06">
+      <joint name="x"     type="slide" axis="1 0 0" damping="0.5"/>
+      <joint name="y"     type="slide" axis="0 1 0" damping="0.5"/>
+      <joint name="theta" type="hinge" axis="0 0 1" damping="0.5"/>
+      <geom type="box" size="0.16 0.08 0.04" rgba="0.20 0.55 0.95 1"/>
+      <geom type="cylinder" size="0.025 0.06" pos="0.16 0 0.04"
+            rgba="0.95 0.20 0.20 1"/>  <!-- nose marker so heading is visible -->
+    </body>
+  </worldbody>
+
+  <actuator>
+    <velocity name="vx"    joint="x"     kv="20" ctrlrange="-2 2"/>
+    <velocity name="vy"    joint="y"     kv="20" ctrlrange="-2 2"/>
+    <velocity name="omega" joint="theta" kv="20" ctrlrange="-3 3"/>
+  </actuator>
+</mujoco>
