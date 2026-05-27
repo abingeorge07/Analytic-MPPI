@@ -63,11 +63,10 @@ def _draw_overlays(
     samples: np.ndarray | None = None,
     weights: np.ndarray | None = None,
     xy_idx: Sequence[int] = (1, 2),
-    top_n: int = 32,
     z: float = 0.06,
     clear: bool = True,
 ) -> None:
-    """Append goal marker + top-N sample rollouts to `scene`.
+    """Append goal marker + the single best (highest-weight) rollout to `scene`.
 
     `clear=True` resets scene.ngeom first -- correct for `viewer.user_scn`
     (a dedicated user-geom scene). For `Renderer.scene`, pass `clear=False`
@@ -79,26 +78,21 @@ def _draw_overlays(
                    [0.95, 0.15, 0.15, 0.95])
     if samples is None or weights is None:
         return
-    K, H, _ = samples.shape
+    best = int(np.argmax(weights))
     idx = list(xy_idx)
-    n = min(top_n, K)
-    order = np.argpartition(-weights, n - 1)[:n] if n < K else np.arange(K)
-    xy = samples[order][..., idx]                 # (n, H, 2)
-    w = weights[order]
-    w_norm = w / max(float(w.max()), 1e-12)
-    for s in range(n):
-        alpha = 0.12 + 0.65 * float(w_norm[s])
-        rgba = [1.0, 0.55, 0.0, alpha]
-        for t in range(H - 1):
-            ok = _append_line(
-                scene,
-                [xy[s, t, 0], xy[s, t, 1], z],
-                [xy[s, t + 1, 0], xy[s, t + 1, 1], z],
-                rgba,
-                width=2.5,
-            )
-            if not ok:
-                return
+    xy = samples[best][..., idx]                  # (H, 2)
+    rgba = [1.0, 0.55, 0.0, 0.95]
+    H = xy.shape[0]
+    for t in range(H - 1):
+        ok = _append_line(
+            scene,
+            [xy[t, 0], xy[t, 1], z],
+            [xy[t + 1, 0], xy[t + 1, 1], z],
+            rgba,
+            width=3.0,
+        )
+        if not ok:
+            return
 
 
 # ---- public entry points ------------------------------------------------
@@ -114,8 +108,13 @@ def run_live(
     draw_rollouts: bool = False,
     on_step: Callable | None = None,
 ) -> None:
-    """Run closed-loop MPPI with the live MuJoCo viewer (real-time paced)."""
+    """Run closed-loop MPPI with the live MuJoCo viewer (real-time paced).
+
+    Shuts down `mujoco.rollout`'s thread pool before the viewer exits to avoid
+    a teardown race that segfaults at close on Linux/GLFW.
+    """
     import mujoco.viewer as mj_viewer
+    from mujoco import rollout as mj_rollout
 
     if draw_rollouts:
         controller.store_samples = True
@@ -124,30 +123,52 @@ def run_live(
     if on_step is not None:
         on_step(0, state, None)
 
-    with mj_viewer.launch_passive(backend.model, backend.data) as viewer:
+    viewer = mj_viewer.launch_passive(backend.model, backend.data)
+    try:
         dt = backend.dt
         for step in range(n_steps):
             if not viewer.is_running():
                 break
             t0 = time.perf_counter()
+
+            # Rollouts touch only thread-local MjData (not backend.data) and
+            # read the const model -- safe to run outside viewer.lock().
             u = controller.act(state, cost_fn, backend)
-            state = backend.step(u)
+
+            # backend.step mutates backend.data, and viewer.user_scn is read
+            # by the render thread -- both must be protected by viewer.lock().
+            with viewer.lock():
+                state = backend.step(u)
+                _draw_overlays(
+                    viewer.user_scn,
+                    goal_xy,
+                    samples=controller.last_samples if draw_rollouts else None,
+                    weights=controller.last_weights if draw_rollouts else None,
+                    xy_idx=xy_idx,
+                )
+
             if on_step is not None:
                 on_step(step + 1, state, u)
-
-            _draw_overlays(
-                viewer.user_scn,
-                goal_xy,
-                samples=controller.last_samples if draw_rollouts else None,
-                weights=controller.last_weights if draw_rollouts else None,
-                xy_idx=xy_idx,
-            )
             viewer.sync()
 
             elapsed = time.perf_counter() - t0
             sleep_for = dt - elapsed
             if sleep_for > 0:
                 time.sleep(sleep_for)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        # Order matters: tear down the rollout thread pool BEFORE the viewer
+        # (and before the MjModel ref count drops at scope exit). Otherwise
+        # rollout's atexit handler can fire after the model is freed.
+        try:
+            mj_rollout.shutdown_persistent_pool()
+        except Exception:
+            pass
+        try:
+            viewer.close()
+        except Exception:
+            pass
 
 
 def run_record(

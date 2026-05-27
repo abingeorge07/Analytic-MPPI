@@ -35,6 +35,7 @@ class MujocoBackend:
         self.nq = int(self.model.nq)
         self.nv = int(self.model.nv)
         self.nu = int(self.model.nu)
+        self.nsensordata = int(self.model.nsensordata)
         self.nstate = int(mujoco.mj_stateSize(self.model, int(self.state_spec)))
         self.dt = float(self.model.opt.timestep)
         self.qpos_slice = slice(1, 1 + self.nq)
@@ -55,19 +56,21 @@ class MujocoBackend:
         mujoco.mj_step(self.model, self.data)
         return self.get_state()
 
-    def rollout(self, initial_states: np.ndarray, controls: np.ndarray) -> np.ndarray:
+    def rollout(self, initial_states: np.ndarray, controls: np.ndarray):
         """Parallel batched rollouts.
 
         initial_states: (B, nstate)
         controls:       (B, H, nu)
-        returns states: (B, H, nstate)   -- excludes the initial state
+        returns: (states, sensordata) each excluding the initial step
+                 states:     (B, H, nstate)
+                 sensordata: (B, H, nsensordata)
         """
         initial_states = np.ascontiguousarray(initial_states, dtype=np.float64)
         controls = np.ascontiguousarray(controls, dtype=np.float64)
-        state, _ = mj_rollout.rollout(
+        state, sensordata = mj_rollout.rollout(
             self.model,
             self._thread_data,
             initial_states,
             controls,
         )
-        return state
+        return state, sensordata

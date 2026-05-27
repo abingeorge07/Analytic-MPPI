@@ -20,5 +20,9 @@ viz = ["imageio[ffmpeg]>=2.30"]
 [tool.hatch.build.targets.wheel]
 packages = ["analytic_mppi"]
 
+# Include MJCF and other data files shipped under analytic_mppi/envs/<env>/
+[tool.hatch.build.targets.wheel.force-include]
+"analytic_mppi/envs" = "analytic_mppi/envs"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

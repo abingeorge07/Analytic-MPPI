@@ -9,7 +9,7 @@ import numpy as np
 class _Backend(Protocol):
     nstate: int
     nu: int
-    def rollout(self, initial_states: np.ndarray, controls: np.ndarray) -> np.ndarray: ...
+    def rollout(self, initial_states: np.ndarray, controls: np.ndarray): ...
 
 
 CostFn = Callable[[np.ndarray, np.ndarray], np.ndarray]
@@ -64,7 +64,7 @@ class MPPI:
             U = np.clip(U, self.u_min, self.u_max)
 
         initial = np.broadcast_to(state, (K, state.shape[0])).copy()
-        states = backend.rollout(initial, U)                # (K, H, nstate)
+        states, _sensordata = backend.rollout(initial, U)   # (K, H, nstate), (K, H, nsensordata)
         costs = np.asarray(cost_fn(states, U), dtype=np.float64).reshape(K)
 
         beta = costs.min()
