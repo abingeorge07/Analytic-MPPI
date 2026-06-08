@@ -43,7 +43,9 @@ class Trajectory:
     terminal_terms: Optional[np.ndarray] = None   # (K, n_terms)
     running_terms_f: Optional[np.ndarray] = None  # (K, H, n_terms_f) — fulfillment in [0,1]
     terminal_terms_f: Optional[np.ndarray] = None # (K, n_terms_f)
-    scores: Optional[np.ndarray] = None           # (K,) — smaller is better
+    scores: Optional[np.ndarray] = None           # (K,) — smaller is better (cost convention)
+    reward: Optional[np.ndarray] = None           # (K,) — populated by _score_fpl only;
+                                                  # positive in [0, 1], LARGER is better.
 
 
 class SamplingController:
@@ -68,6 +70,8 @@ class SamplingController:
     ):
         if use_fpl_cost and use_fpl_discounted:
             raise ValueError("use_fpl_cost and use_fpl_discounted are mutually exclusive")
+        # γ must be in [0, 1); γ=1 makes the finite-horizon normaliser (1-γ)/(1-γ^H) = 0/0.
+        assert 0.0 <= fpl_gamma < 1.0, f"fpl_gamma must be in [0, 1), got {fpl_gamma}"
         self.task = task
         self.backend = backend
         self.num_samples = int(num_samples)
@@ -152,26 +156,80 @@ class SamplingController:
     # ---- scoring (returns (K,) costs; SMALLER IS BETTER) ----
 
     def _score_normal(self, traj: Trajectory) -> np.ndarray:
-        # sum running cost over (H, n_terms) plus terminal sum over (n_terms,)
-        running = traj.running_terms.sum(axis=(1, 2))         # (K,)
+        # Running cost terms are rates (cost-per-unit-time evaluated at each
+        # step), so the total accumulated cost over the horizon is the time
+        # integral  ∫ ℓ dt  ≈  Σ ℓ_i · dt. Multiplying by dt matches hydrax's
+        # per-step scaling in alg_base.py:312-313 and keeps the running vs.
+        # terminal balance consistent across different timestep sizes.
+        # Terminal cost is a one-shot penalty (not a rate) and stays unscaled.
+        dt = float(self.backend.dt)
+        running  = traj.running_terms.sum(axis=(1, 2)) * dt   # (K,)
         terminal = traj.terminal_terms.sum(axis=-1)           # (K,)
         return running + terminal
 
     def _score_fpl(self, traj: Trajectory) -> np.ndarray:
+        # Convention: `terminal_terms_f` may return FEWER terms than
+        # `running_terms_f`. The i-th terminal term corresponds to the i-th
+        # running term; trailing running terms (i >= n_term) have no terminal
+        # contribution and span only H steps. This avoids constant-1
+        # placeholders for terms like control-fulfillment that are undefined
+        # at the terminal step. When n_term == n_run (e.g., walker, hopper)
+        # this collapses to the original behaviour (one (H+1)-step series).
         gamma = self.fpl_gamma
-        H = traj.running_terms_f.shape[1]
-        discounts = gamma ** np.arange(H, dtype=np.float64)    # (H,)
+        running  = traj.running_terms_f    # (K, H, n_run)
+        terminal = traj.terminal_terms_f   # (K, n_term)  with n_term <= n_run
+        H, n_run = running.shape[1], running.shape[-1]
+        n_term = terminal.shape[-1]
+        if n_term > n_run:
+            raise ValueError(
+                f"terminal_cost_terms_f returned {n_term} terms but "
+                f"running_cost_terms_f returned {n_run}; expected n_term <= n_run"
+            )
+
+        H1 = H + 1
+        discounts_full = gamma ** np.arange(H1, dtype=np.float64)   # (H+1,)
+        norm_full = (1.0 - gamma) / (1.0 - gamma ** H1)
+        discounts_run = gamma ** np.arange(H,  dtype=np.float64)    # (H,)
+        norm_run = (1.0 - gamma) / (1.0 - gamma ** H) if H > 1 else 1.0
 
         if self.use_fpl_cost:
-            # per-step running fulfillment scalar (power-mean over terms) then discount over time.
-            per_step = power_mean(traj.running_terms_f, self.fpl_p)   # (K, H)
-            reward = (per_step * discounts[None, :]).sum(axis=1) * (1.0 - gamma)
+            # Per-step scalar via power-mean, then discount over time.
+            # Terminal step's power-mean only sees terms that actually have a
+            # terminal value (the first n_term), so a "missing" term doesn't
+            # silently contribute 1.0.
+            per_step_run = power_mean(running, self.fpl_p)                # (K, H)
+            if n_term > 0:
+                per_step_term = power_mean(terminal, self.fpl_p)          # (K,)
+                per_step = np.concatenate([per_step_run, per_step_term[:, None]], axis=1)
+                reward = (per_step * discounts_full[None, :]).sum(axis=1) * norm_full
+            else:
+                reward = (per_step_run * discounts_run[None, :]).sum(axis=1) * norm_run
         else:  # use_fpl_discounted
-            # discount each term independently over time, then power-mean over terms.
-            per_term_sums = (traj.running_terms_f * discounts[:, None]).sum(axis=1) * (1.0 - gamma)  # (K, n_terms)
-            reward = power_mean(per_term_sums, self.fpl_p)        # (K,)
+            # Each term gets its own discount-sum across its lifetime,
+            # normalized to [0,1] by its own finite-horizon factor, then
+            # power-mean over the per-term scalars.
+            chunks = []
+            if n_term > 0:
+                # Terms 0..n_term-1 span H+1 steps (running + terminal).
+                extended = np.concatenate(
+                    [running[..., :n_term], terminal[:, None, :]], axis=1
+                )                                                         # (K, H+1, n_term)
+                chunks.append(
+                    (extended * discounts_full[:, None]).sum(axis=1) * norm_full
+                )
+            if n_run > n_term:
+                # Terms n_term..n_run-1 span only H steps.
+                chunks.append(
+                    (running[..., n_term:] * discounts_run[:, None]).sum(axis=1) * norm_run
+                )
+            per_term_sums = np.concatenate(chunks, axis=-1)               # (K, n_run)
+            reward = power_mean(per_term_sums, self.fpl_p)                # (K,)
 
-        # cost convention: lower is better → negate the reward
+        # Expose the raw reward (positive, in [0,1], LARGER is better) so subclasses
+        # that prefer reward semantics can argmax it directly. The returned scores
+        # keep the cost convention (smaller is better) for backwards compatibility
+        # with existing update_mean implementations.
+        traj.reward = reward
         return -reward
 
     # ---- warm-start: shift mean forward in time by dt ----

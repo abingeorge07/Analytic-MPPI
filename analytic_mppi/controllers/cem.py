@@ -65,7 +65,11 @@ class CEM(SamplingController):
         return np.concatenate([main, explore], axis=0)
 
     def update_mean(self, traj: Trajectory) -> np.ndarray:
-        elites = np.argsort(traj.scores)[: self.num_elites]
+        # FPL: pick the highest-reward samples. Normal: pick the lowest-cost samples.
+        if self.use_fpl_cost or self.use_fpl_discounted:
+            elites = np.argsort(-traj.reward)[: self.num_elites]   # descending by reward
+        else:
+            elites = np.argsort(traj.scores)[: self.num_elites]    # ascending by cost
         elite_knots = traj.knots[elites]
         new_mean = elite_knots.mean(axis=0)
         new_cov = np.maximum(elite_knots.std(axis=0), self.sigma_min)

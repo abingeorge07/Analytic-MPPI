@@ -86,27 +86,52 @@ class MppiCma(SamplingController):
         return out
 
     def update_mean(self, traj: Trajectory) -> np.ndarray:
-        scores = traj.scores
-        if self.use_fpl_cost or self.use_fpl_discounted:
-            # FPL path: pick best sample (no covariance update — match mis MPPI behavior)
-            best = int(np.argmin(scores))
-            return traj.knots[best].copy()
+        is_fpl = self.use_fpl_cost or self.use_fpl_discounted
 
-        # softmax weights (lower cost = higher weight)
-        z = -(scores - scores.min()) / self.temperature
+        # softmax weights — used by the MEAN update in both modes, and by the
+        # COVARIANCE update in normal mode.
+        #
+        # Normal mode applies softmax to raw scores (cost convention).
+        # FPL mode rescales each batch's positive REWARDS to [0,1] first so
+        # the temperature has a meaningful, scale-invariant interpretation
+        # across tasks (FPL raw rewards typically cluster in a very narrow
+        # range, which would otherwise produce ~uniform weights for any
+        # reasonable temperature).
+        if is_fpl:
+            r = traj.reward
+            lo, hi = float(r.min()), float(r.max())
+            span = hi - lo
+            normalized = (r - lo) / span if span > 1e-12 else np.zeros_like(r)
+            # Best (highest reward) -> normalized=1.0 -> largest exp.
+            z = normalized / self.temperature
+        else:
+            scores = traj.scores
+            z = -(scores - scores.min()) / self.temperature
+
         w = np.exp(z)
         s = w.sum()
         if s <= 0 or not np.isfinite(s):
-            best = int(np.argmin(scores))
+            # Pathological softmax (everything underflowed). Skip cov update,
+            # return the single best sample.
+            best = int(traj.reward.argmax()) if is_fpl else int(np.argmin(traj.scores))
             return traj.knots[best].copy()
         w = w / s
 
-        # delta := knots - mean_prev    shape (K, num_knots, nu)
-        delta = traj.knots - self.mean
-        # weighted outer product per knot: einsum("k,khi,khj->hij")
-        new_sample_cov = np.einsum("k,khi,khj->hij", w, delta, delta)
+        # ---------- covariance update ----------
+        if is_fpl:
+            # FPL: single-best rank-1 outer product. The EMA blend with the
+            # existing cov keeps it full-rank; _clamp_eigenvalues holds the floor.
+            best = int(traj.reward.argmax())
+            delta_best = traj.knots[best] - self.mean              # (num_knots, nu)
+            new_sample_cov = np.einsum("hi,hj->hij", delta_best, delta_best)
+        else:
+            # Normal: softmax-weighted ensemble outer product (textbook MPPI-CMA).
+            delta = traj.knots - self.mean                          # (K, num_knots, nu)
+            new_sample_cov = np.einsum("k,khi,khj->hij", w, delta, delta)
+
         new_cov = (1.0 - self.alpha) * self.cov + self.alpha * new_sample_cov
         new_cov = _clamp_eigenvalues(new_cov, self.minimum_noise_level ** 2)
         self.cov = new_cov
 
+        # ---------- mean update (softmax-weighted in BOTH modes) ----------
         return np.einsum("k,khj->hj", w, traj.knots)

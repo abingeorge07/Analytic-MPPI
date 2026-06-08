@@ -48,5 +48,9 @@ class PredictiveSampling(SamplingController):
         return knots
 
     def update_mean(self, traj: Trajectory) -> np.ndarray:
-        best = int(np.argmin(traj.scores))
+        # FPL: argmax on positive reward. Normal: argmin on cost-convention scores.
+        if self.use_fpl_cost or self.use_fpl_discounted:
+            best = int(traj.reward.argmax())
+        else:
+            best = int(np.argmin(traj.scores))
         return traj.knots[best].copy()
