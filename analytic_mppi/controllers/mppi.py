@@ -12,7 +12,7 @@ class _Backend(Protocol):
     def rollout(self, initial_states: np.ndarray, controls: np.ndarray): ...
 
 
-CostFn = Callable[[np.ndarray, np.ndarray], np.ndarray]
+CostFn = Callable[..., np.ndarray]   # (states, controls, sensordata=None) -> (K,)
 
 
 @dataclass
@@ -23,7 +23,7 @@ class MPPI:
       1. Sample K Gaussian noise sequences of length H, std `sigma`.
       2. Form K candidate control sequences = nominal + noise, clip to [u_min, u_max].
       3. Roll out in parallel from `state` via `backend.rollout`.
-      4. Score each rollout with `cost_fn(states, controls) -> (K,)`.
+      4. Score each rollout with `cost_fn(states, controls, sensordata) -> (K,)`.
       5. Re-weight: w_k = exp(-(J_k - min J) / lambda_), normalize.
       6. Update nominal = sum_k w_k * U_k.
       7. Return nominal[0]; shift nominal left, pad with zero.
@@ -64,8 +64,8 @@ class MPPI:
             U = np.clip(U, self.u_min, self.u_max)
 
         initial = np.broadcast_to(state, (K, state.shape[0])).copy()
-        states, _sensordata = backend.rollout(initial, U)   # (K, H, nstate), (K, H, nsensordata)
-        costs = np.asarray(cost_fn(states, U), dtype=np.float64).reshape(K)
+        states, sensordata = backend.rollout(initial, U)    # (K, H, nstate), (K, H, nsensordata)
+        costs = np.asarray(cost_fn(states, U, sensordata), dtype=np.float64).reshape(K)
 
         beta = costs.min()
         w = np.exp(-(costs - beta) / self.lambda_)

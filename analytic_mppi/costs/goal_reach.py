@@ -33,7 +33,8 @@ class GoalReachCost:
         self.idx = list(self.state_xy_idx)
         self.R_arr = None if self.R is None else np.atleast_1d(np.asarray(self.R, dtype=np.float64))
 
-    def __call__(self, states: np.ndarray, controls: np.ndarray) -> np.ndarray:
+    def __call__(self, states: np.ndarray, controls: np.ndarray,
+                 sensordata: np.ndarray | None = None) -> np.ndarray:
         xy = states[..., self.idx]                            # (B, H, 2)
         sqdist = ((xy - self.goal_arr) ** 2).sum(axis=-1)     # (B, H)
         running = self.Q * sqdist[..., :-1].sum(axis=-1)      # (B,)

@@ -64,7 +64,8 @@ class InvPenCost:
 
     # ---- MPPI batched integration over (B, H) ----
 
-    def __call__(self, states: np.ndarray, controls: np.ndarray) -> np.ndarray:
+    def __call__(self, states: np.ndarray, controls: np.ndarray,
+                 sensordata: np.ndarray | None = None) -> np.ndarray:
         d_up = self._distance_to_upright(states)            # (B, H)
         td = self._get_theta_dot_cost(states)               # (B, H)
         uc = self._get_control_cost(controls)               # (B, H)
