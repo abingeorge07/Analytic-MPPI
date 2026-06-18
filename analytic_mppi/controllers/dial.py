@@ -65,10 +65,12 @@ class DIAL(SamplingController):
         return knots
 
     def update_mean(self, traj: Trajectory) -> np.ndarray:
-        scores = traj.scores
+        # FPL: best-sample via argmax on positive reward.
+        # Normal: softmax-weighted average via cost-convention scores.
         if self.use_fpl_cost or self.use_fpl_discounted:
-            best = int(np.argmin(scores))
+            best = int(traj.reward.argmax())
             return traj.knots[best].copy()
+        scores = traj.scores
         z = -(scores - scores.min()) / self.temperature
         w = np.exp(z)
         s = w.sum()

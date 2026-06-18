@@ -74,10 +74,62 @@ def interp_linear(knots: np.ndarray, tk: np.ndarray, t_eval: np.ndarray) -> np.n
     kr = knots[..., right, :]
     return kl + (kr - kl) * w[..., :, None]
 
+def interp_cubic(knots: np.ndarray, tk: np.ndarray, t_eval: np.ndarray) -> np.ndarray:
+    """Clamped cubic-Hermite (Catmull-Rom) interpolation along the second-to-last axis.
+
+    knots:   (..., num_knots, nu)
+    tk:      (num_knots,) — monotone increasing
+    t_eval:  (H,)
+    returns: (..., H, nu)
+
+    Tangents at each knot are finite differences of neighbors (centered for
+    interior knots, one-sided at the endpoints) — no tridiagonal solve,
+    unlike a natural cubic spline. Output is C^1 and each evaluation
+    depends on the 4 surrounding knots only, so perturbing one knot only
+    changes a local stretch of the curve — the right property for
+    knot-spline MPC.
+
+    Degenerates to interp_linear when num_knots == 2 and to interp_zero
+    when num_knots == 1.
+    """
+    K = tk.shape[0]
+    if K == 1:
+        return interp_zero(knots, tk, t_eval)
+    if K == 2:
+        return interp_linear(knots, tk, t_eval)
+
+    # per-knot tangents m: (..., K, nu)
+    m_first = (knots[..., 1:2, :] - knots[..., 0:1, :]) / (tk[1] - tk[0])
+    m_last  = (knots[..., -1:, :] - knots[..., -2:-1, :]) / (tk[-1] - tk[-2])
+    m_mid   = (knots[..., 2:, :] - knots[..., :-2, :]) / (tk[2:] - tk[:-2])[:, None]
+    m = np.concatenate([m_first, m_mid, m_last], axis=-2)
+
+    right = np.clip(np.searchsorted(tk, t_eval, side="left"), 1, K - 1)
+    left = right - 1
+    tl, tr = tk[left], tk[right]
+    h = np.where(tr > tl, tr - tl, 1.0)
+    u = np.clip((t_eval - tl) / h, 0.0, 1.0)              # (H,)
+    u2, u3 = u * u, u * u * u
+    h00 =  2 * u3 - 3 * u2 + 1
+    h10 =      u3 - 2 * u2 + u
+    h01 = -2 * u3 + 3 * u2
+    h11 =      u3 -     u2
+
+    yl = knots[..., left,  :]
+    yr = knots[..., right, :]
+    ml = m[...,    left,  :]
+    mr = m[...,    right, :]
+    hb = h[:, None]
+    return (h00[:, None] * yl
+            + h10[:, None] * (hb * ml)
+            + h01[:, None] * yr
+            + h11[:, None] * (hb * mr))
+
 
 SPLINE_INTERPOLATORS = {
     "zero": interp_zero,
     "linear": interp_linear,
+    "cubic": interp_cubic
 }
 
 

@@ -55,13 +55,24 @@ class MPPIv2(SamplingController):
         return self.mean[None, ...] + noise
 
     def update_mean(self, traj: Trajectory) -> np.ndarray:
-        scores = traj.scores
-        # FPL modes use best-sample. Normal mode uses softmax-weighted average.
+        # FPL modes use best-sample (argmax on positive reward in [0,1]).
+        # Normal mode uses softmax-weighted average (argmin on cost-convention scores).
         if self.use_fpl_cost or self.use_fpl_discounted:
-            best = int(np.argmin(scores))
-            return traj.knots[best].copy()
+            best_reward = int(traj.reward.argmax())
+
+            # # numerically stable softmax of (-scores / temperature)
+            # scores = traj.scores
+            # z = -(scores - scores.min()) / self.temperature
+            # w = np.exp(z)
+            # s = w.sum()
+            # if s <= 0 or not np.isfinite(s):
+            #     best = int(np.argmin(scores))
+            #     return traj.knots[best].copy()
+            
+            return traj.knots[best_reward].copy()
 
         # numerically stable softmax of (-scores / temperature)
+        scores = traj.scores
         z = -(scores - scores.min()) / self.temperature
         w = np.exp(z)
         s = w.sum()

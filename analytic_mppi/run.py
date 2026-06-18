@@ -49,7 +49,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--steps", type=int, default=20000, help="number of MPC steps (closed-loop)")
     p.add_argument("--num-samples", type=int, default=256)
     p.add_argument("--num-knots", type=int, default=4)
-    p.add_argument("--plan-horizon-sec", type=float, default=1.0)
+    p.add_argument("--plan-horizon-sec", type=float, default=0.6)
     p.add_argument("--spline-type", choices=["zero", "linear"], default="zero")
     p.add_argument("--iterations", type=int, default=1, help="optimization iterations per MPC step")
     p.add_argument("--seed", type=int, default=0)
@@ -59,12 +59,12 @@ def build_parser() -> argparse.ArgumentParser:
     # Defaults are conservative, pendulum-tuned starting points — override as needed.
     p.add_argument("--noise-level", type=float, default=0.5,
                    help="MPPI / DIAL / Predictive Sampling — Gaussian sample stddev (default: 0.5)")
-    p.add_argument("--temperature", type=float, default=1.0,
+    p.add_argument("--temperature", type=float, default=0.1,
                    help="MPPI / DIAL / MPPI-CMA — softmax temperature lambda (default: 1.0)")
     # MPPI-CMA
-    p.add_argument("--initial-noise-level", type=float, default=0.5,
+    p.add_argument("--initial-noise-level", type=float, default=0.3,
                    help="MPPI-CMA initial sigma (default: 0.5)")
-    p.add_argument("--minimum-noise-level", type=float, default=0.1,
+    p.add_argument("--minimum-noise-level", type=float, default=0.3,
                    help="MPPI-CMA covariance eigenvalue floor (default: 0.1)")
     p.add_argument("--cov-rate", type=float, default=0.1,
                    help="MPPI-CMA covariance adaptation rate alpha (default: 0.1)")

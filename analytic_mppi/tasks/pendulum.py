@@ -69,6 +69,8 @@ class PendulumTask(Task):
         )
 
     def terminal_cost_terms_f(self, qpos, qvel, sensordata) -> np.ndarray:
-        f = self._upright_fulfillment(qpos)
-        ones = np.ones_like(f)
-        return np.stack([f, ones], axis=-1)
+        # Only the upright term has a terminal contribution. Control fulfillment
+        # is undefined at the terminal step (no action is applied), so we omit
+        # it rather than padding with ones — a constant placeholder biases the
+        # power-mean / discounted reward upward without conveying any info.
+        return self._upright_fulfillment(qpos)[..., None]
