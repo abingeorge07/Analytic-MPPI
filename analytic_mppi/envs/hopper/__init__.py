@@ -6,6 +6,25 @@ Layout (matches the MJCF):
   nu   = 3 (thigh / leg / foot torques, ctrlrange [-1, 1], gear 200)
 
 Task: hop forward (+x) while keeping the torso near `target_height` and upright.
+
+Performance (why this demo is slower than pendulum/run.py):
+  The MPPI controller, MujocoBackend, and NumPy cost reductions are shared and
+  identical across envs, so the slowdown is entirely per-`mj_step` model cost,
+  not the Python layer. Measured warm (8 threads, K=2048): ~132 ms per `act()`
+  plan here vs ~52 ms for the pendulum -- even though the hopper simulates
+  *fewer* steps per plan (K*H = 81,920 vs 102,400). Causes, ranked:
+    1. Contact dynamics. pendulum.xml sets `<flag contact="disable"/>` and does
+       zero collision/constraint work; hopper.xml runs full ground contact
+       (floor plane + 4 condim=3 capsule geoms), so each `mj_step` pays for
+       collision detection + the iterative constraint solver -- the single
+       biggest contributor and the one the pendulum skips entirely.
+    2. 6x larger model (nq=nv=6 vs 1): bigger mass-matrix factorization and more
+       bodies/geoms in forward dynamics per step (~3x cost per `mj_step`).
+    3. run.py defaults to --steps 300 vs the pendulum's 200, a 1.5x multiplier
+       on total wall time on top of the higher per-plan cost.
+  This is expected/inherent to the richer model, not a regression. Most of it is
+  irreducible without lowering model fidelity (XML solver/contact settings) or
+  the sampling budget (n_samples / horizon).
 """
 from __future__ import annotations
 

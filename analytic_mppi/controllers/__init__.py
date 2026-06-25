@@ -10,6 +10,7 @@ The CLI's --variant flag and env make_controller(variant=...) read CONTROLLERS
 directly, so a new key shows up automatically.
 """
 from analytic_mppi.controllers.mppi import MPPI
+from analytic_mppi.controllers.mppi_greedy import MPPIGreedy
 from analytic_mppi.controllers.mppi_v2 import MPPIv2
 from analytic_mppi.controllers.mppi_cma import MppiCma
 from analytic_mppi.controllers.cem import CEM
@@ -21,6 +22,7 @@ from analytic_mppi.controllers.predictive_sampling import PredictiveSampling
 # from the existing env factories (unicycle, pendulum).
 CONTROLLERS: dict[str, type] = {
     "vanilla": MPPI,
+    "greedy": MPPIGreedy,
 }
 
 # New knot-spline controllers (Task-based API) -- selected by the unified CLI
@@ -63,7 +65,7 @@ def list_sampling_controllers() -> list[str]:
 
 
 __all__ = [
-    "MPPI", "MPPIv2", "MppiCma", "CEM", "DIAL", "PredictiveSampling",
+    "MPPI", "MPPIGreedy", "MPPIv2", "MppiCma", "CEM", "DIAL", "PredictiveSampling",
     "CONTROLLERS", "SAMPLING_CONTROLLERS",
     "get_controller_class", "get_sampling_controller_class",
     "list_controllers", "list_sampling_controllers",

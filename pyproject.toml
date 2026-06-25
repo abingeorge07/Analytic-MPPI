@@ -16,6 +16,9 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest"]
 viz = ["imageio[ffmpeg]>=2.30"]
+# Gymnasium LunarLander env (Box2D); pygame only needed for `--live` rendering.
+# box2d-py builds from source, so a `swig` is required (e.g. `pip install swig`).
+lunarlander = ["gymnasium>=0.29", "box2d-py>=2.3.5", "pygame>=2.5"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["analytic_mppi"]
