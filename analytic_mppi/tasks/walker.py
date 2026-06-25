@@ -50,14 +50,14 @@ class WalkerTask(Task):
         vel = self._torso_vel_x(sensordata)
         zax = self._torso_zaxis_z(sensordata)
         height_cost = 10.0 * (height - self.target_height) ** 2
-        orient_cost = .0 * (zax - 1.0) ** 2
+        orient_cost = 10.0 * (zax - 1.0) ** 2
         velocity_cost = 1.0 * (vel - self.target_velocity) ** 2
         zero = np.zeros_like(height_cost)
         return np.stack([height_cost, orient_cost, velocity_cost, zero], axis=-1)
 
     def running_cost_terms(self, qpos, qvel, sensordata, u) -> np.ndarray:
         terms = self.terminal_cost_terms(qpos, qvel, sensordata)
-        control_cost = 0.0000000001 * np.sum(u ** 2, axis=-1)
+        control_cost = 0.001 * np.sum(u ** 2, axis=-1)
         # replace the last (zero) column with control cost
         out = terms.copy()
         out[..., -1] = control_cost
