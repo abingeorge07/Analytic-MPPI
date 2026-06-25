@@ -12,12 +12,18 @@ inner cost-term Jacobians via per-step finite differences.
 This is *instance-level* wrapping (it replaces `ctrl._rollout_and_score` on the
 one object), not a global monkey-patch — pass a freshly built controller in.
 
-Limitations (MVP, inherited from the notebook):
-  * Requires `nq == nv` (no quaternion-bearing free joints). Holds for pendulum,
-    walker, hopper; NOT for cube / g1_standup — wrapping a controller on those
-    tasks raises NotImplementedError on the first refinement step.
+Free-joint models (`nq != nv`, e.g. cube / g1_standup) are supported: the cost-
+and sensor-term position gradients are differentiated in *tangent* space (width
+`nv`) via `mujoco.mj_integratePos`, so they line up with `mjd_transitionFD`'s
+velocity-space `A` / `B` Jacobians. For `nq == nv` (pendulum / walker / hopper)
+this reduces exactly to plain componentwise qpos finite differences.
+
+Note:
   * `gd_iterations == 0` short-circuits the refinement and reproduces the
     unwrapped baseline bit-for-bit (the seed-stable equivalence check).
+  * Free-joint refinement is slower (per-state `mj_integratePos` / `mj_forward`
+    for the tangent FD); pass `use_sensor_jac_from_FD=True` to take the sensor
+    Jacobian from `mjd_transitionFD`'s `C` matrix and skip the separate pass.
 """
 from __future__ import annotations
 
@@ -28,6 +34,25 @@ import mujoco
 
 from .sampling_base import Trajectory
 from .spline import interpolate
+
+
+def _integrate_pos(model, qpos_flat, tan_flat):
+    """Apply tangent-space deltas to a batch of qpos via the configuration-manifold
+    exponential map (`mujoco.mj_integratePos`, dt=1).
+
+    qpos_flat (N, nq), tan_flat (N, nv)  ->  (N, nq). For hinge/slide joints this is
+    plain addition; for quaternion (free/ball) joints it is the proper quaternion
+    integration — the *same* map `mjd_transitionFD` uses internally, so a tangent FD
+    built on it is consistent with the velocity-space A/B Jacobians by construction.
+    """
+    N, nq = qpos_flat.shape
+    out = np.empty((N, nq), dtype=np.float64)
+    qp = np.empty(nq, dtype=np.float64)
+    for n in range(N):
+        qp[:] = qpos_flat[n]
+        mujoco.mj_integratePos(model, qp, np.ascontiguousarray(tan_flat[n], dtype=np.float64), 1.0)
+        out[n] = qp
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -85,9 +110,13 @@ def rollout_with_jacobians(backend, initial, controls, fd_eps=1e-6, flg_centered
 
 
 def sensor_jac_via_forward(backend, states_full, fd_eps=1e-6):
-    """Per-step sensor Jacobian d(sensor)/d(qpos, qvel) via mj_forward + FD.
+    """Per-step sensor Jacobian d(sensor)/d(position, qvel) via mj_forward + FD.
 
-    Costs M*H*(nq+nv) mj_forward calls. Assumes sensors depend only on state.
+    Returns (dsens_dpos, dsens_dqvel) each of width `nv` so both align with
+    `mjd_transitionFD`'s velocity-space layout. The position block is differentiated
+    in **tangent space** via `mj_integratePos` — for `nq == nv` (no quaternion joints)
+    this is identical to plain componentwise qpos FD; for free/ball joints it is the
+    correct manifold derivative. Costs ~M*H*2*nv mj_forward calls.
     """
     model = backend.model
     M, H, nstate = states_full.shape
@@ -98,22 +127,36 @@ def sensor_jac_via_forward(backend, states_full, fd_eps=1e-6):
     qpos_start = backend.qpos_slice.start
     qvel_start = backend.qvel_slice.start
 
-    dsens_dqpos = np.empty((M, H, ns, nq), dtype=np.float64)
+    dsens_dpos = np.empty((M, H, ns, nv), dtype=np.float64)
     dsens_dqvel = np.empty((M, H, ns, nv), dtype=np.float64)
+    quaternion_joints = (nq != nv)
 
     data = mujoco.MjData(model)
+    qp = np.empty(nq, dtype=np.float64)
+    tan = np.zeros(nv, dtype=np.float64)
 
     for m in range(M):
         for t in range(H):
             state_ref = states_full[m, t]
-            for j in range(nq):
-                sp = state_ref.copy(); sp[qpos_start + j] += fd_eps
-                sm = state_ref.copy(); sm[qpos_start + j] -= fd_eps
+            qpos_ref = state_ref[qpos_start:qpos_start + nq]
+            for j in range(nv):
+                # tangent-space perturbation of the position via the manifold exp map
+                if quaternion_joints:
+                    tan[:] = 0.0; tan[j] = fd_eps
+                    sp = state_ref.copy()
+                    qp[:] = qpos_ref; mujoco.mj_integratePos(model, qp, tan, 1.0)
+                    sp[qpos_start:qpos_start + nq] = qp
+                    sm = state_ref.copy()
+                    qp[:] = qpos_ref; mujoco.mj_integratePos(model, qp, tan, -1.0)
+                    sm[qpos_start:qpos_start + nq] = qp
+                else:
+                    sp = state_ref.copy(); sp[qpos_start + j] += fd_eps
+                    sm = state_ref.copy(); sm[qpos_start + j] -= fd_eps
                 mujoco.mj_setState(model, data, sp, state_spec_int); mujoco.mj_forward(model, data)
                 splus = data.sensordata.copy()
                 mujoco.mj_setState(model, data, sm, state_spec_int); mujoco.mj_forward(model, data)
                 sminus = data.sensordata.copy()
-                dsens_dqpos[m, t, :, j] = (splus - sminus) / (2 * fd_eps)
+                dsens_dpos[m, t, :, j] = (splus - sminus) / (2 * fd_eps)
             for j in range(nv):
                 sp = state_ref.copy(); sp[qvel_start + j] += fd_eps
                 sm = state_ref.copy(); sm[qvel_start + j] -= fd_eps
@@ -122,7 +165,7 @@ def sensor_jac_via_forward(backend, states_full, fd_eps=1e-6):
                 mujoco.mj_setState(model, data, sm, state_spec_int); mujoco.mj_forward(model, data)
                 sminus = data.sensordata.copy()
                 dsens_dqvel[m, t, :, j] = (splus - sminus) / (2 * fd_eps)
-    return dsens_dqpos, dsens_dqvel
+    return dsens_dpos, dsens_dqvel
 
 
 # ---------------------------------------------------------------------------
@@ -262,7 +305,26 @@ def cost_and_grad(qpos, qvel, sensordata, controls, task, cost_mode, dt, fpl_p, 
             jac[..., j, :] = (rp - rm) / (2 * fd_eps)
         return jac
 
-    drt_dq = _fd_running(qpos, 'qpos')
+    # For free-joint models (nq != nv), differentiate the cost w.r.t. qpos in
+    # TANGENT space (width nv) via mj_integratePos, so it aligns with the
+    # velocity-space A/B Jacobians. For nq == nv this is identical to the plain
+    # componentwise qpos FD, so we keep that (faster, vectorized) path.
+    nv = qvel.shape[-1]
+    nq = qpos.shape[-1]
+    if nq != nv:
+        model = task.mj_model
+        n_rt = rt.shape[-1]
+        qpos_flat = qpos.reshape(M * H, nq)
+        drt_dq = np.empty((M, H, nv, n_rt), dtype=np.float64)
+        for i in range(nv):
+            tan = np.zeros((M * H, nv), dtype=np.float64); tan[:, i] = fd_eps
+            qp_p = _integrate_pos(model, qpos_flat, tan).reshape(M, H, nq)
+            qp_m = _integrate_pos(model, qpos_flat, -tan).reshape(M, H, nq)
+            rp = get_rt(qp_p, qvel, sensordata, controls)
+            rm = get_rt(qp_m, qvel, sensordata, controls)
+            drt_dq[..., i, :] = (rp - rm) / (2 * fd_eps)
+    else:
+        drt_dq = _fd_running(qpos, 'qpos')
     drt_dv = _fd_running(qvel, 'qvel')
     drt_ds = _fd_running(sensordata, 'sensordata')
     drt_du = _fd_running(controls, 'controls')
@@ -290,7 +352,19 @@ def cost_and_grad(qpos, qvel, sensordata, controls, task, cost_mode, dt, fpl_p, 
             jac[..., j, :] = (tp - tm) / (2 * fd_eps)
         return jac
 
-    dtt_dq_T = _fd_terminal(qpos[:, -1], 'qpos')
+    if nq != nv:
+        model = task.mj_model
+        n_tt = tt.shape[-1]
+        q_T = qpos[:, -1]                                  # (M, nq)
+        v_T, s_T = qvel[:, -1], sensordata[:, -1]
+        dtt_dq_T = np.empty((M, nv, n_tt), dtype=np.float64)
+        for i in range(nv):
+            tan = np.zeros((M, nv), dtype=np.float64); tan[:, i] = fd_eps
+            tp = get_tt(_integrate_pos(model, q_T, tan), v_T, s_T)
+            tm = get_tt(_integrate_pos(model, q_T, -tan), v_T, s_T)
+            dtt_dq_T[..., i, :] = (tp - tm) / (2 * fd_eps)
+    else:
+        dtt_dq_T = _fd_terminal(qpos[:, -1], 'qpos')
     dtt_dv_T = _fd_terminal(qvel[:, -1], 'qvel')
     dtt_ds_T = _fd_terminal(sensordata[:, -1], 'sensordata')
 
@@ -342,12 +416,9 @@ def gd_refine_topmu(backend, task, initial, controls, pre_scores, pre_states, pr
     """
     K, H, nu = controls.shape
     nv = int(backend.model.nv); na = int(backend.model.na)
-    nq = int(backend.model.nq)
-    if nq != nv:
-        raise NotImplementedError(
-            "cost-GD requires nq == nv (no quaternion-bearing free joints). "
-            "Holds for pendulum / walker / hopper, not cube / g1_standup."
-        )
+    # Free-joint models (nq != nv) are handled: the cost/sensor position gradients
+    # are taken in tangent space (width nv) so they align with mjd_transitionFD's
+    # velocity-space A/B Jacobians. See cost_and_grad / sensor_jac_via_forward.
     ns_v = 2 * nv + na
 
     M = min(num_refine, K)
