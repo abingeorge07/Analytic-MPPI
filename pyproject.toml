@@ -19,6 +19,10 @@ viz = ["imageio[ffmpeg]>=2.30"]
 # Gymnasium LunarLander env (Box2D); pygame only needed for `--live` rendering.
 # box2d-py builds from source, so a `swig` is required (e.g. `pip install swig`).
 lunarlander = ["gymnasium>=0.29", "box2d-py>=2.3.5", "pygame>=2.5"]
+# Only needed to (re)download the humanoid_mocap reference clip; the .npz is
+# vendored in the repo, so runtime needs nothing extra. See
+# analytic_mppi/envs/humanoid_mocap/_fetch_reference.py
+mocap = ["huggingface_hub"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["analytic_mppi"]
