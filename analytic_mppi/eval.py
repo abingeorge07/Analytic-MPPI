@@ -63,7 +63,16 @@ def _fpl_kwargs(cost_mode: str, fpl_p: float, fpl_gamma: float) -> Dict[str, Any
         return dict(use_fpl_discounted=True, fpl_p=fpl_p, fpl_gamma=fpl_gamma)
     if cost_mode == "fpl_cost":
         return dict(use_fpl_cost=True, fpl_p=fpl_p, fpl_gamma=fpl_gamma)
-    raise ValueError(f"unknown cost_mode {cost_mode!r} (normal | fpl_cost | fpl_discounted)")
+    if cost_mode == "fpl_layered":
+        # Two-level composition over grouped atoms (task.fpl_groups). fpl_group_p (inner
+        # power-mean p) flows through **algo_kwargs (Config.kwargs / build_kwargs).
+        return dict(use_fpl_layered=True, fpl_p=fpl_p, fpl_gamma=fpl_gamma)
+    if cost_mode == "hybrid":
+        # quadratic targets + FPL log-barrier floors (task.floor_term_indices).
+        # floor_weight flows through **algo_kwargs (Config.kwargs / build_kwargs).
+        return dict(use_hybrid=True)
+    raise ValueError(f"unknown cost_mode {cost_mode!r} "
+                     f"(normal | fpl_cost | fpl_discounted | fpl_layered | hybrid)")
 
 
 def make_controller(
@@ -126,6 +135,31 @@ def init_hang_down(backend) -> None:
     backend.set_state(s)
 
 
+def init_hopper_stand(backend, settle_steps: int = 60) -> None:
+    """Hopper: drop from the model's default pose (torso at z≈2.5) and let it
+    settle to a stationary stand (height ≈1.2, upright, vel≈0) under zero control.
+
+    The stand-still-refusal experiment must start from a *settled stationary*
+    pose, otherwise the opening transient (the torso falling from 2.5) confounds
+    the "does the controller choose to stay still vs move" read.
+    """
+    backend.get_state()
+    zero_u = np.zeros(backend.nu, dtype=np.float64)
+    for _ in range(int(settle_steps)):
+        backend.step(zero_u)
+
+
+def init_g1_stand(backend) -> None:
+    """G1 humanoid: start from the 'stand' keyframe at rest (mirrors
+    run.py:_set_initial_state). The g1_standup task is really "keep standing /
+    balance" from this pose, so it's the natural start for the comparison."""
+    import mujoco
+    kf = backend.model.keyframe("stand")
+    backend.data.qpos[:] = kf.qpos
+    backend.data.qvel[:] = 0.0
+    mujoco.mj_forward(backend.model, backend.data)
+
+
 # ---------------------------------------------------------------------------
 #  Episodes / studies
 # ---------------------------------------------------------------------------
@@ -139,6 +173,27 @@ class Config:
     cost_mode: str = "normal"
     kwargs: Dict[str, Any] = field(default_factory=dict)
     cost_gd: Optional[Dict[str, Any]] = None   # e.g. dict(gd_iterations=3, gd_lr=0.1)
+    fpl_p: Optional[float] = None              # power-mean exponent; None → make_controller default (0.1)
+
+
+def _copy_or_none(x: Any) -> Optional[np.ndarray]:
+    return None if x is None else np.asarray(x, dtype=float).copy()
+
+
+def _stack_optional(seq: List[Optional[np.ndarray]]) -> Optional[np.ndarray]:
+    """Stack a per-step list of length-J vectors (or None) into (T, J).
+
+    Returns None if no step produced a vector (controller doesn't expose the field);
+    steps that are None become NaN rows. J is taken from the first present vector.
+    """
+    present = [x for x in seq if x is not None]
+    if not present:
+        return None
+    out = np.full((len(seq), present[0].shape[0]), np.nan)
+    for t, x in enumerate(seq):
+        if x is not None:
+            out[t] = x
+    return out
 
 
 def run_episode(
@@ -154,7 +209,9 @@ def run_episode(
 ) -> Dict[str, np.ndarray]:
     """Run one closed-loop episode; return history arrays.
 
-    Returns dict with: states (T+1, nstate), ctrls (T, nu), sd (T, nsensordata).
+    Always returns: states (T+1, nstate), ctrls (T, nu), sd (T, nsensordata), ess (T).
+    When the controller exposes multi-objective diagnostics (ComposedGradientMPPI),
+    also returns alpha / obj_ess / obj_satisfaction, each (T, J).
     """
     task, backend, ctrl = make_controller(
         task_name, controller, cost_mode=cost_mode, seed=seed, cost_gd=cost_gd, **build_kwargs
@@ -166,17 +223,37 @@ def run_episode(
     states_hist = [state.copy()]
     ctrls_hist: List[np.ndarray] = []
     sd_hist: List[np.ndarray] = []
+    ess_hist: List[float] = []
+    alpha_hist: List[Optional[np.ndarray]] = []
+    obj_ess_hist: List[Optional[np.ndarray]] = []
+    obj_sat_hist: List[Optional[np.ndarray]] = []
     for _ in range(steps):
         u = ctrl.act(state)
         state = backend.step(u)
         states_hist.append(state.copy())
         ctrls_hist.append(u.copy())
         sd_hist.append(np.asarray(backend.data.sensordata, dtype=np.float64).copy())
-    return dict(
+        # Effective sample size of this step's softmax weighting, if the
+        # controller exposes it (MPPIv2). NaN otherwise (argmax/elite samplers).
+        ess_hist.append(float(getattr(ctrl, "last_ess", np.nan) or np.nan))
+        # Multi-objective composition diagnostics (ComposedGradientMPPI): the composition
+        # weights, per-objective ESS, and per-objective satisfaction. None for every other
+        # controller -> the keys are simply omitted from the result below.
+        alpha_hist.append(_copy_or_none(getattr(ctrl, "last_alpha", None)))
+        obj_ess_hist.append(_copy_or_none(getattr(ctrl, "last_obj_ess", None)))
+        obj_sat_hist.append(_copy_or_none(getattr(ctrl, "last_obj_satisfaction", None)))
+    out: Dict[str, np.ndarray] = dict(
         states=np.asarray(states_hist),   # (T+1, nstate)
         ctrls=np.asarray(ctrls_hist),     # (T,   nu)
         sd=np.asarray(sd_hist),           # (T,   nsensordata)
+        ess=np.asarray(ess_hist),         # (T,)
     )
+    for key, seq in (("alpha", alpha_hist), ("obj_ess", obj_ess_hist),
+                     ("obj_satisfaction", obj_sat_hist)):
+        stacked = _stack_optional(seq)    # (T, J) or None
+        if stacked is not None:
+            out[key] = stacked
+    return out
 
 
 def run_study(
@@ -201,20 +278,22 @@ def run_study(
     for cfg in configs:
         if progress:
             print(f"running {cfg.label:40s}", end="", flush=True)
+        fpl_p_kw = {} if cfg.fpl_p is None else {"fpl_p": cfg.fpl_p}
         eps = []
         for ep in range(n_episodes):
             eps.append(run_episode(
                 task_name, cfg.controller, steps=steps, seed=seed0 + ep,
                 cost_mode=cfg.cost_mode, init_fn=init_fn, cost_gd=cfg.cost_gd,
-                **shared_build_kwargs, **cfg.kwargs,
+                **shared_build_kwargs, **cfg.kwargs, **fpl_p_kw,
             ))
             if progress:
                 print(".", end="", flush=True)
-        study[cfg.label] = dict(
-            states=np.stack([e["states"] for e in eps]),  # (N_EP, T+1, nstate)
-            ctrls=np.stack([e["ctrls"] for e in eps]),     # (N_EP, T,   nu)
-            sd=np.stack([e["sd"] for e in eps]),           # (N_EP, T,   nsd)
-        )
+        # Stack every history key the episodes produced (states/ctrls/sd/ess always;
+        # alpha/obj_ess/obj_satisfaction only when the controller exposed them). Leading
+        # axis is the episode index. Keys are consistent across episodes of one config
+        # (same controller + cost mode).
+        keys = list(eps[0].keys())
+        study[cfg.label] = {k: np.stack([e[k] for e in eps]) for k in keys}
         if progress:
             print(" done")
     return study
@@ -398,7 +477,7 @@ def render_video(
             cam_id = -1
 
     fps = max(1, int(round(1.0 / backend.dt)))
-    frames, states_hist, ctrls_hist, plan_times = [], [state.copy()], [], []
+    frames, states_hist, ctrls_hist, sd_hist, plan_times = [], [state.copy()], [], [], []
     renderer = mujoco.Renderer(backend.model, width=width, height=height)
     try:
         for _ in range(steps):
@@ -408,6 +487,7 @@ def render_video(
             state = backend.step(u)
             states_hist.append(state.copy())
             ctrls_hist.append(u.copy())
+            sd_hist.append(np.asarray(backend.data.sensordata, dtype=np.float64).copy())
             renderer.update_scene(backend.data, camera=cam_id)
             frames.append(renderer.render().copy())
     finally:
@@ -418,5 +498,6 @@ def render_video(
         path=out_path,
         states=np.asarray(states_hist),
         ctrls=np.asarray(ctrls_hist),
+        sd=np.asarray(sd_hist),
         plan_ms=1e3 * float(np.mean(plan_times)),
     )

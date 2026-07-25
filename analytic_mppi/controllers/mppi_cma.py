@@ -43,15 +43,18 @@ class MppiCma(SamplingController):
         seed: int = 0,
         use_fpl_cost: bool = False,
         use_fpl_discounted: bool = False,
+        use_fpl_layered: bool = False,
         fpl_p: float = 0.1,
         fpl_gamma: float = 0.99,
+        fpl_group_p: float | None = None,
     ):
         super().__init__(
             task=task, backend=backend, num_samples=num_samples,
             num_knots=num_knots, plan_horizon=plan_horizon, spline_type=spline_type,
             iterations=iterations, seed=seed,
             use_fpl_cost=use_fpl_cost, use_fpl_discounted=use_fpl_discounted,
-            fpl_p=fpl_p, fpl_gamma=fpl_gamma,
+            use_fpl_layered=use_fpl_layered,
+            fpl_p=fpl_p, fpl_gamma=fpl_gamma, fpl_group_p=fpl_group_p,
         )
         self.initial_noise_level = float(initial_noise_level)
         self.minimum_noise_level = (
@@ -86,7 +89,7 @@ class MppiCma(SamplingController):
         return out
 
     def update_mean(self, traj: Trajectory) -> np.ndarray:
-        is_fpl = self.use_fpl_cost or self.use_fpl_discounted
+        is_fpl = self.use_fpl_cost or self.use_fpl_discounted or self.use_fpl_layered
 
         # softmax weights — used by the MEAN update in both modes, and by the
         # COVARIANCE update in normal mode.

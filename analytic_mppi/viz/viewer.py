@@ -123,7 +123,9 @@ def run_live(
     if on_step is not None:
         on_step(0, state, None)
 
-    viewer = mj_viewer.launch_passive(backend.model, backend.data)
+    # Hide the left (settings) and right (info) UI panels — toggle back at runtime with Tab.
+    viewer = mj_viewer.launch_passive(backend.model, backend.data,
+                                      show_left_ui=False, show_right_ui=False)
     try:
         dt = backend.dt
         for step in range(n_steps):

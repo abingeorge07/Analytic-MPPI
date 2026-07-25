@@ -49,6 +49,12 @@ class Task:
 
     cost_term_names: List[str] = []        # subclasses set
     cost_term_names_f: List[str] = []      # subclasses set
+    # Hybrid cost: indices of objectives treated as FPL log-barrier "floors" (safety —
+    # never fail); the rest are unbounded quadratic "targets" (reach/maximize). Indices
+    # refer to the shared ordering of `cost_term_names` / `cost_term_names_f` (which the
+    # hybrid mode assumes are index-aligned). Empty -> hybrid degenerates to the normal
+    # quadratic sum. Subclasses override.
+    floor_term_indices: List[int] = []
 
     def __init__(self, model_path: str | os.PathLike):
         self.model_path = Path(model_path)
@@ -101,3 +107,26 @@ class Task:
 
     def terminal_cost_f(self, qpos, qvel, sensordata, p: float = 0.1) -> np.ndarray:
         return power_mean(self.terminal_cost_terms_f(qpos, qvel, sensordata), p)
+
+    # ---- layered / grouped FPL (optional) ----
+    # A two-level composition: discount-sum each atom over time, inner power-mean the
+    # atoms WITHIN each group, then outer power-mean ACROSS the group scalars. Lets one
+    # semantic objective (e.g. "posture") be an inner power-mean over many sub-atoms
+    # (per-joint fulfillments) that sits alongside standalone atoms (orientation, height)
+    # at the outer level. Empty `fpl_groups` -> task has no grouped variant.
+    fpl_group_names: List[str] = []   # one name per outer-level group
+    fpl_groups: List[List[int]] = []  # partition of the grouped atom vector: index lists
+
+    def running_cost_terms_f_grouped(self, qpos, qvel, sensordata, u) -> np.ndarray:
+        """Expanded fulfillment atoms (e.g. one per joint) for layered FPL. (*lead, n)."""
+        raise NotImplementedError(
+            f"{type(self).__name__} does not support layered/grouped FPL "
+            f"(no running_cost_terms_f_grouped / fpl_groups). Use cost_mode "
+            f"'fpl_discounted' instead, or define the grouped atoms on the task."
+        )
+
+    def terminal_cost_terms_f_grouped(self, qpos, qvel, sensordata) -> np.ndarray:
+        raise NotImplementedError(
+            f"{type(self).__name__} does not support layered/grouped FPL "
+            f"(no terminal_cost_terms_f_grouped / fpl_groups)."
+        )

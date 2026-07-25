@@ -11,7 +11,10 @@ from analytic_mppi.controllers import (
     CEM,
     DIAL,
     PredictiveSampling,
+    ComposedGradientMPPI,
 )
+from analytic_mppi.controllers.sampling_base import Trajectory
+from analytic_mppi.tasks.base import power_mean
 
 
 # --------------------------- legacy unicycle MPPI ---------------------------
@@ -90,6 +93,11 @@ def _algo_kwargs(name):
         "cem": dict(num_elites=8, sigma_start=1.0, sigma_min=0.1),
         "dial": dict(noise_level=0.5, temperature=1.0, beta_opt_iter=3.0, beta_horizon=3.0),
         "predictive_sampling": dict(noise_level=0.5),
+        # FplGmm requires FPL mode (absolute [0,1] reward scale drives its adaptation).
+        "fpl_gmm": dict(use_fpl_cost=True, sigma_max=1.0, sigma_min=0.1, allocation="mixture"),
+        # ComposedGradientMPPI requires a per-objective FPL vector (discounted here).
+        "composed_grad": dict(noise_level=0.5, temperature=1.0,
+                              use_fpl_discounted=True, fpl_p=0.1, fpl_gamma=0.99),
     }[name]
 
 
@@ -127,3 +135,187 @@ def test_pendulum_mppi_fpl_paths_run(fpl_mode):
     actions = np.asarray(actions)
     # at least some action variability — i.e. the controller is doing something
     assert actions.std() > 1e-3, "FPL action sequence collapsed to a constant"
+
+
+# ---------------------- FPL == true MPPI (only scalarization differs) --------
+
+def test_power_mean_p1_equals_arithmetic_mean():
+    """p=+1 makes the power-mean a plain arithmetic mean == a LINEAR scalarization
+    of the atoms. This is what lets one p-knob interpolate linear <-> FPL."""
+    from analytic_mppi.tasks.base import power_mean
+    x = np.random.default_rng(0).uniform(0.01, 1.0, size=(5, 4))
+    assert np.allclose(power_mean(x, 1.0), x.mean(axis=-1))
+
+
+def test_fpl_score_is_neg_log_reward_and_weighted_average():
+    """FPL scoring must be S_k = -log(u_k) (u in (0,1]), and MPPIv2 must consume it
+    with a softmax-weighted AVERAGE — not an argmax on the single best rollout.
+    Guards the two core fixes that make FPL a true MPPI."""
+    task = make_task("pendulum")
+    backend = MujocoBackend(task.model_path, nthread=2)
+    ctrl = MPPIv2(task, backend, use_fpl_cost=True, fpl_p=-1.0, fpl_gamma=0.99,
+                  noise_level=0.5, temperature=1.0, **_PENDULUM_RUN)
+    state = backend.get_state()
+    traj = ctrl._rollout_and_score(state)
+
+    # reward in (0,1]; scores are exactly -log(reward).
+    assert np.all(traj.reward > 0.0) and np.all(traj.reward <= 1.0 + 1e-9)
+    assert np.allclose(traj.scores, -np.log(traj.reward))
+
+    new_mean = ctrl.update_mean(traj)
+    # A weighted average, NOT argmax on the best rollout.
+    argmax_knot = traj.knots[int(traj.reward.argmax())]
+    assert not np.allclose(new_mean, argmax_knot), \
+        "FPL update collapsed to argmax; expected a softmax-weighted average"
+    # ESS is logged and in [1, K].
+    assert ctrl.last_ess is not None
+    assert 1.0 <= ctrl.last_ess <= ctrl.num_samples + 1e-6
+
+
+def test_fpl_layered_two_level_power_mean():
+    """Layered FPL is a TWO-level composition: discount-sum each atom, inner power-mean
+    (fpl_group_p) the atoms within each task.fpl_groups group, then outer power-mean
+    (fpl_p) the group scalars. Distinct inner/outer p must both take effect."""
+    task = make_task("pendulum")
+    backend = MujocoBackend(task.model_path, nthread=2)
+    ctrl = MPPIv2(task, backend, use_fpl_layered=True, fpl_p=-2.0, fpl_group_p=1.0,
+                  fpl_gamma=0.9, noise_level=0.5, temperature=1.0, **_PENDULUM_RUN)
+    # group 0 = atoms {0,1}, group 1 = atom {2}; overridden on the shared task instance.
+    ctrl.task.fpl_groups = [[0, 1], [2]]
+
+    # Atoms held CONSTANT over time => the normalized discounted sum equals the constant,
+    # so each per-term FQ-value is exactly its atom value and the math is checkable.
+    K, H, n = 4, ctrl.H, 3
+    vals = np.random.default_rng(0).uniform(0.2, 1.0, size=(K, n))
+    running = np.broadcast_to(vals[:, None, :], (K, H, n)).copy()
+    traj = Trajectory(knots=None, controls=None, states=None, sensordata=None,
+                      qpos=None, qvel=None,
+                      running_terms_f=running, terminal_terms_f=vals.copy())
+    scores = ctrl._score_fpl_layered(traj)
+
+    g0 = power_mean(vals[:, [0, 1]], 1.0)                    # inner p = fpl_group_p
+    g1 = power_mean(vals[:, [2]], 1.0)
+    expected = power_mean(np.stack([g0, g1], axis=-1), -2.0)  # outer p = fpl_p
+    assert np.allclose(traj.reward, expected)
+    assert np.allclose(scores, -np.log(expected))
+    assert np.all(traj.reward > 0.0) and np.all(traj.reward <= 1.0 + 1e-9)
+
+
+# -------------- ComposedGradientMPPI (multi-objective gradient composition) --
+
+def test_composed_gradient_requires_per_objective_fpl():
+    """The controller needs a per-objective [0,1] vector; normal cost and fpl_cost
+    (which power-means objectives per-step before any vector exists) are rejected."""
+    task = make_task("pendulum")
+    backend = MujocoBackend(task.model_path, nthread=2)
+    with pytest.raises(ValueError):
+        ComposedGradientMPPI(task, backend, noise_level=0.5, temperature=1.0, **_PENDULUM_RUN)
+    with pytest.raises(ValueError):
+        ComposedGradientMPPI(task, backend, use_fpl_cost=True, fpl_p=0.1,
+                             noise_level=0.5, temperature=1.0, **_PENDULUM_RUN)
+
+
+def test_composed_reward_terms_invariant_discounted():
+    """reward_terms is the per-objective [0,1] vector and collapses to reward via
+    power_mean(., fpl_p) — the invariant the composition relies on (discounted)."""
+    task = make_task("pendulum")
+    backend = MujocoBackend(task.model_path, nthread=2)
+    ctrl = ComposedGradientMPPI(task, backend, use_fpl_discounted=True, fpl_p=0.1,
+                                fpl_gamma=0.99, noise_level=0.5, temperature=1.0,
+                                **_PENDULUM_RUN)
+    traj = ctrl._rollout_and_score(backend.get_state())
+    assert traj.reward_terms is not None
+    assert traj.reward_terms.shape[0] == ctrl.num_samples
+    assert np.all(traj.reward_terms >= 0.0) and np.all(traj.reward_terms <= 1.0 + 1e-9)
+    assert np.allclose(traj.reward, power_mean(traj.reward_terms, ctrl.fpl_p))
+
+
+def test_composed_reward_terms_invariant_layered():
+    """Same invariant for layered mode: reward_terms are the per-GROUP scalars, and
+    reward == power_mean(group_scores, fpl_p). (Built synthetically like the layered
+    test above since pendulum has no grouped-atom method.)"""
+    task = make_task("pendulum")
+    backend = MujocoBackend(task.model_path, nthread=2)
+    ctrl = ComposedGradientMPPI(task, backend, use_fpl_layered=True, fpl_p=-2.0,
+                                fpl_group_p=1.0, fpl_gamma=0.9, noise_level=0.5,
+                                temperature=1.0, **_PENDULUM_RUN)
+    ctrl.task.fpl_groups = [[0, 1], [2]]
+    K, H, n = 4, ctrl.H, 3
+    vals = np.random.default_rng(1).uniform(0.2, 1.0, size=(K, n))
+    running = np.broadcast_to(vals[:, None, :], (K, H, n)).copy()
+    traj = Trajectory(knots=None, controls=None, states=None, sensordata=None,
+                      qpos=None, qvel=None,
+                      running_terms_f=running, terminal_terms_f=vals.copy())
+    ctrl._score_fpl_layered(traj)
+    assert traj.reward_terms is not None and traj.reward_terms.shape == (K, 2)
+    assert np.allclose(traj.reward, power_mean(traj.reward_terms, ctrl.fpl_p))
+
+
+@pytest.mark.parametrize("compose", ["worst_first", "uniform"])
+def test_composed_update_stays_in_sample_hull(compose):
+    """Core stability guarantee: the convex-combination update lies within the
+    per-coordinate hull of the sampled knots — no step size, no clipping needed."""
+    task = make_task("pendulum")
+    backend = MujocoBackend(task.model_path, nthread=2)
+    ctrl = ComposedGradientMPPI(task, backend, use_fpl_discounted=True, fpl_p=0.1,
+                                fpl_gamma=0.99, compose=compose, noise_level=0.5,
+                                temperature=1.0, **_PENDULUM_RUN)
+    traj = ctrl._rollout_and_score(backend.get_state())
+    new_mean = ctrl.update_mean(traj)
+    lo, hi = traj.knots.min(axis=0), traj.knots.max(axis=0)
+    assert np.all(new_mean >= lo - 1e-9) and np.all(new_mean <= hi + 1e-9)
+
+
+def test_composed_worst_objective_gets_more_weight():
+    """worst_first + power_p must place MORE composition weight on the lower-satisfied
+    objective. Synthetic reward_terms: objective 0 ≈0.1, objective 1 ≈0.9."""
+    task = make_task("pendulum")
+    backend = MujocoBackend(task.model_path, nthread=2)
+    ctrl = ComposedGradientMPPI(task, backend, use_fpl_discounted=True, fpl_p=0.1,
+                                fpl_gamma=0.99, compose="worst_first",
+                                alpha_mode="power_p", noise_level=0.5, temperature=1.0,
+                                **_PENDULUM_RUN)
+    K = ctrl.num_samples
+    rng = np.random.default_rng(0)
+    V = np.stack([rng.uniform(0.05, 0.15, size=K),
+                  rng.uniform(0.85, 0.95, size=K)], axis=1)
+    knots = rng.normal(size=(K, ctrl.num_knots, task.nu))
+    traj = Trajectory(knots=knots, controls=None, states=None, sensordata=None,
+                      qpos=None, qvel=None, reward_terms=V)
+    ctrl.update_mean(traj)
+    assert ctrl.last_alpha[0] > ctrl.last_alpha[1]
+
+
+def test_composed_diagnostics_populated():
+    """last_alpha (sums to 1, ≥0), per-objective ESS and combined ESS are all in range."""
+    task = make_task("pendulum")
+    backend = MujocoBackend(task.model_path, nthread=2)
+    ctrl = ComposedGradientMPPI(task, backend, use_fpl_discounted=True, fpl_p=0.1,
+                                fpl_gamma=0.99, noise_level=0.5, temperature=1.0,
+                                **_PENDULUM_RUN)
+    traj = ctrl._rollout_and_score(backend.get_state())
+    ctrl.update_mean(traj)
+    J = traj.reward_terms.shape[1]
+    assert ctrl.last_alpha.shape == (J,)
+    assert np.isclose(ctrl.last_alpha.sum(), 1.0) and np.all(ctrl.last_alpha >= 0.0)
+    assert ctrl.last_obj_ess.shape == (J,)
+    K = ctrl.num_samples
+    assert np.all((ctrl.last_obj_ess >= 1.0 - 1e-6) & (ctrl.last_obj_ess <= K + 1e-6))
+    assert 1.0 - 1e-6 <= ctrl.last_ess <= K + 1e-6
+
+
+def test_composed_gradient_closed_loop_nonconstant():
+    """30 closed-loop steps on pendulum: finite actions that actually vary."""
+    task = make_task("pendulum")
+    backend = MujocoBackend(task.model_path, nthread=2)
+    ctrl = ComposedGradientMPPI(task, backend, use_fpl_discounted=True, fpl_p=0.1,
+                                fpl_gamma=0.99, noise_level=0.5, temperature=1.0,
+                                **_PENDULUM_RUN)
+    state = backend.get_state()
+    actions = []
+    for _ in range(30):
+        u = ctrl.act(state)
+        assert np.all(np.isfinite(u))
+        actions.append(u.copy())
+        state = backend.step(u)
+    assert np.asarray(actions).std() > 1e-3

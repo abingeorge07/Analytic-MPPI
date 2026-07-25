@@ -77,6 +77,9 @@ def build_parser() -> argparse.ArgumentParser:
     # DIAL
     p.add_argument("--beta-opt-iter", type=float, default=3.0, help="DIAL beta_1 (default: 3.0)")
     p.add_argument("--beta-horizon", type=float, default=3.0, help="DIAL beta_2 (default: 3.0)")
+    # FplGmm (requires --fpl or --fpl-discounted). sigma_max <- --sigma-start, sigma_min <- --sigma-min.
+    p.add_argument("--allocation", choices=["mixture", "sus"], default="mixture",
+                   help="FplGmm: 'mixture' (multinomial GMM draw) or 'sus' (evolutionary resampler)")
 
     # FPL toggles
     fpl_group = p.add_mutually_exclusive_group()
@@ -86,6 +89,9 @@ def build_parser() -> argparse.ArgumentParser:
                            help="FPL discounted: per-term discount-sum then power-mean over terms")
     p.add_argument("--fpl-p", type=float, default=0.1, help="FPL power-mean exponent")
     p.add_argument("--fpl-gamma", type=float, default=0.99, help="FPL temporal discount")
+    p.add_argument("--fpl-time-p", type=float, default=None,
+                   help="FPL cost time aggregation: default (unset) = discounted mean over "
+                        "time; set q<=0 for soft-min over time (rollout value = its worst moment)")
 
     # output / viz
     p.add_argument("--live", action="store_true", help="open interactive MuJoCo viewer")
@@ -122,6 +128,11 @@ _ALGO_PARAMS: Dict[str, list[tuple[str, str]]] = {
         ("beta_horizon", "beta_horizon"),
     ],
     "predictive_sampling": [("noise_level", "noise_level")],
+    "fpl_gmm": [
+        ("sigma_start", "sigma_max"),
+        ("sigma_min", "sigma_min"),
+        ("allocation", "allocation"),
+    ],
 }
 
 
@@ -152,6 +163,10 @@ def _build(args: argparse.Namespace):
         fpl_gamma=args.fpl_gamma,
         **_collect_algo_kwargs(args),
     )
+    # fpl_time_p (soft-min over time) is currently an MPPIv2-only kwarg; only pass it
+    # when set so other controllers' constructors aren't handed an unexpected arg.
+    if args.fpl_time_p is not None:
+        kwargs["fpl_time_p"] = args.fpl_time_p
     ctrl = cls(task, backend, **kwargs)
     return task, backend, ctrl
 
@@ -160,7 +175,8 @@ def _print_header(task, backend, ctrl, args):
     print(f"task   = {args.task}  (nq={task.nq}, nv={task.nv}, nu={task.nu}, nsd={task.nsensordata}, dt={backend.dt})")
     print(f"algo   = {args.algo} -> {type(ctrl).__name__}  K={ctrl.num_samples} knots={ctrl.num_knots} H={ctrl.H} spline={ctrl.spline_type}")
     fpl = "cost" if args.fpl else ("discounted" if args.fpl_discounted else "off")
-    print(f"FPL    = {fpl} (p={args.fpl_p}, gamma={args.fpl_gamma})")
+    time_agg = "discounted-mean" if args.fpl_time_p is None else f"soft-min(q={args.fpl_time_p})"
+    print(f"FPL    = {fpl} (p={args.fpl_p}, gamma={args.fpl_gamma}, time={time_agg})")
 
 
 def _set_initial_state(task_name: str, backend):
@@ -252,7 +268,9 @@ def _run_live(task, backend, ctrl, args) -> None:
     from mujoco import rollout as mj_rollout
 
     state = _set_initial_state(args.task, backend)
-    viewer = mj_viewer.launch_passive(backend.model, backend.data)
+    # Hide the left (settings) and right (info) UI panels — toggle back at runtime with Tab.
+    viewer = mj_viewer.launch_passive(backend.model, backend.data,
+                                      show_left_ui=False, show_right_ui=False)
     try:
         dt = backend.dt
         for step in range(args.steps):

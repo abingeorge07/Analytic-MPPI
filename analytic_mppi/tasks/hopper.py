@@ -22,10 +22,17 @@ class HopperTask(Task):
     """
 
     cost_term_names = ["height_cost", "orientation_cost", "velocity_cost", "control_cost"]
+    # FPL atoms. Speed uses a LINEAR ramp (proportional credit) rather than a Gaussian
+    # that pins near 0 from low speed. Control is a near-constant effort regularizer that
+    # rarely binds but measurably prevents falls (see _control_fulfillment).
     cost_term_names_f = ["height_fulfillment", "orientation_fulfillment", "velocity_fulfillment", "control_fulfillment"]
 
-    def __init__(self, *, target_velocity: float = 0.1, target_height: float = 1.0):
+    def __init__(self, *, target_velocity: float = 1.0, target_height: float = 1.0):
         super().__init__(_MODEL_PATH)
+        # target_velocity default is deliberately high enough that STANDING STILL
+        # fails the speed objective (measured: a settled hopper stands at height
+        # ≈1.2 with zaxis_z≈1.0 and vel_x≈0). This is what makes the objectives
+        # genuinely compete for the stand-still-refusal demo (FPL_MPPI_HANDOFF §7).
         self.target_velocity = float(target_velocity)
         self.target_height = float(target_height)
         # cache sensor address spans
@@ -66,21 +73,42 @@ class HopperTask(Task):
     # ---- FPL cost ----
 
     def _height_fulfillment(self, sensordata: np.ndarray) -> np.ndarray:
-        # 1 at target height, decays with deviation, gentle band.
-        err = self._torso_height(sensordata) - self.target_height
-        return np.exp(-(err ** 2) / (0.1 ** 2))
+        # One-sided saturating band: full credit at/above `h_full`, decaying
+        # linearly to 0 at `h_floor`. `h_floor` is well ABOVE the collapsed-torso
+        # height (~0.2), so this decays BEFORE the fall cliff — the min-fulfillment
+        # floor bites while the torso is dropping toward a fall, not after it has
+        # already fallen (FPL_MPPI_HANDOFF §6/§8). No penalty for hopping higher.
+        h = self._torso_height(sensordata)
+        h_full, h_floor = 1.0, 0.5
+        return np.clip((h - h_floor) / (h_full - h_floor), 0.0, 1.0)
 
     def _orientation_fulfillment(self, sensordata: np.ndarray) -> np.ndarray:
-        # zax dot (0,0,1) in [-1,1] -> shift to [0,1]
+        # zaxis_z = cos(torso tilt): 1 upright, 0 horizontal. Full credit near
+        # upright (`z_full` ≈ cos 18°), decaying to 0 by `z_floor` (≈ cos 53°) —
+        # i.e. before the torso is horizontal, so uprightness decays before the
+        # tip-over cliff (FPL_MPPI_HANDOFF §6).
         z = self._torso_zaxis_z(sensordata)
-        return np.clip((z + 1.0) * 0.5, 0.0, 1.0)
+        z_full, z_floor = 0.95, 0.6
+        return np.clip((z - z_floor) / (z_full - z_floor), 0.0, 1.0)
 
     def _velocity_fulfillment(self, sensordata: np.ndarray) -> np.ndarray:
-        err = self._torso_vel_x(sensordata) - self.target_velocity
-        return np.exp(-(err ** 2) / (0.5 ** 2))
+        # One-sided, LINEAR forward-speed tracking: proportional credit vx/target,
+        # capped at 1 at/above the target. The old Gaussian form pinned this atom
+        # near 0 for almost every sampled rollout (target is unreachable within one
+        # short planning rollout from low speed), giving the conjunction nothing to
+        # discriminate on. A linear ramp gives partial speed proportional credit —
+        # more spread — while staying one-sided (no reward for exceeding the target,
+        # so no incentive to sprint into a fall; FPL_MPPI_HANDOFF §6).
+        vx = self._torso_vel_x(sensordata)
+        return np.clip(vx / self.target_velocity, 0.0, 1.0)
 
     def _control_fulfillment(self, u: np.ndarray) -> np.ndarray:
-        return np.clip(1.0 - np.mean(u ** 2, axis=-1), 0.0, 1.0)
+        # Mild effort regularizer. Sits near-constant in ~[0.75, 1.0] — it is almost
+        # never the binding conjunction term, but that near-constant "floor" still
+        # discourages slamming the actuators, which measurably prevents falls. (An
+        # earlier version dropped it as a "dead" atom; that INCREASED the fall rate —
+        # liveness ≠ value.)
+        return np.clip(1.0 - 0.25 * np.mean(u ** 2, axis=-1), 0.0, 1.0)
 
     def running_cost_terms_f(self, qpos, qvel, sensordata, u) -> np.ndarray:
         return np.stack(
@@ -94,14 +122,13 @@ class HopperTask(Task):
         )
 
     def terminal_cost_terms_f(self, qpos, qvel, sensordata) -> np.ndarray:
-        f1 = self._height_fulfillment(sensordata)
-        ones = np.ones_like(f1)
+        # control fulfillment is undefined at the terminal step (no action applied),
+        # so this returns only the 3 state-based atoms; _score_fpl handles n_term < n_run.
         return np.stack(
             [
-                f1,
+                self._height_fulfillment(sensordata),
                 self._orientation_fulfillment(sensordata),
                 self._velocity_fulfillment(sensordata),
-                ones,
             ],
             axis=-1,
         )

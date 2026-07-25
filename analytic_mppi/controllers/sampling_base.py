@@ -22,7 +22,7 @@ branch on FPL inside their update_mean.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Sequence
 
 import numpy as np
 
@@ -46,6 +46,13 @@ class Trajectory:
     scores: Optional[np.ndarray] = None           # (K,) — smaller is better (cost convention)
     reward: Optional[np.ndarray] = None           # (K,) — populated by _score_fpl only;
                                                   # positive in [0, 1], LARGER is better.
+    reward_terms: Optional[np.ndarray] = None     # (K, J) — per-objective [0,1] values,
+                                                  # LARGER is better. Populated ONLY by the
+                                                  # discounted / layered FPL scorers (the
+                                                  # modes where a per-objective vector exists
+                                                  # before the power_mean collapse); None
+                                                  # otherwise. Invariant when set:
+                                                  # reward == power_mean(reward_terms, fpl_p).
 
 
 class SamplingController:
@@ -65,11 +72,29 @@ class SamplingController:
         # FPL settings
         use_fpl_cost: bool = False,
         use_fpl_discounted: bool = False,
+        use_fpl_layered: bool = False,
         fpl_p: float = 0.1,
         fpl_gamma: float = 0.99,
+        fpl_time_p: Optional[float] = None,
+        # Inner power-mean exponent for layered FPL (across atoms WITHIN a group, e.g.
+        # per-joint). None -> reuse fpl_p (same conjunctiveness inner and outer).
+        fpl_group_p: Optional[float] = None,
+        # Restrict the FPL reward to a SUBSET of the task's fulfillment atoms (indices
+        # into `task.cost_term_names_f`). None -> use all atoms. e.g. [2] on g1_standup
+        # scores ONLY nominal_fulfillment through the normal fpl_cost/fpl_discounted
+        # pipeline (single-term reward — power_mean of one atom is that atom).
+        fpl_term_indices: Optional[Sequence[int]] = None,
+        # Hybrid: unbounded quadratic penalties for "target" objectives (strong signal
+        # to reach/maximize) + FPL log-barrier -log(fulfillment) for "floor" objectives
+        # (hard "never fail" safety). Which terms are floors is set by the task's
+        # `floor_term_indices`. floor_weight scales the barrier.
+        use_hybrid: bool = False,
+        floor_weight: float = 1.0,
     ):
-        if use_fpl_cost and use_fpl_discounted:
-            raise ValueError("use_fpl_cost and use_fpl_discounted are mutually exclusive")
+        if sum([bool(use_fpl_cost), bool(use_fpl_discounted), bool(use_fpl_layered),
+                bool(use_hybrid)]) > 1:
+            raise ValueError("use_fpl_cost / use_fpl_discounted / use_fpl_layered / "
+                             "use_hybrid are mutually exclusive")
         # γ must be in [0, 1); γ=1 makes the finite-horizon normaliser (1-γ)/(1-γ^H) = 0/0.
         assert 0.0 <= fpl_gamma < 1.0, f"fpl_gamma must be in [0, 1), got {fpl_gamma}"
         self.task = task
@@ -81,8 +106,20 @@ class SamplingController:
         self.iterations = int(iterations)
         self.use_fpl_cost = bool(use_fpl_cost)
         self.use_fpl_discounted = bool(use_fpl_discounted)
+        self.use_fpl_layered = bool(use_fpl_layered)
+        self.fpl_term_indices = None if fpl_term_indices is None else list(fpl_term_indices)
         self.fpl_p = float(fpl_p)
         self.fpl_gamma = float(fpl_gamma)
+        # Time aggregation for fpl_cost mode. None -> discounted arithmetic mean over
+        # time (original: a rollout's value is its time-AVERAGE, which launders away a
+        # single catastrophic step — e.g. a go-fast-then-faceplant rollout still scores
+        # high). A float q (use q<=0) -> power-mean over time = "soft-min over time", so
+        # a rollout's value is dominated by its WORST moment. This is what makes the
+        # min-fulfillment floor hold across the whole trajectory, not just per-step.
+        self.fpl_time_p = None if fpl_time_p is None else float(fpl_time_p)
+        self.fpl_group_p = None if fpl_group_p is None else float(fpl_group_p)
+        self.use_hybrid = bool(use_hybrid)
+        self.floor_weight = float(floor_weight)
         self.nu = int(task.nu)
 
         self.tk = make_knot_times(self.plan_horizon, self.num_knots)
@@ -146,10 +183,29 @@ class SamplingController:
             qpos=qpos, qvel=qvel,
         )
 
-        if self.use_fpl_cost or self.use_fpl_discounted:
+        if self.use_hybrid:
+            # Needs BOTH representations: quadratic penalties for target terms,
+            # fulfillments for the log-barrier floor terms.
+            traj.running_terms = self.task.running_cost_terms(qpos, qvel, sensordata, controls)
+            traj.terminal_terms = self.task.terminal_cost_terms(qpos[:, -1], qvel[:, -1], sensordata[:, -1])
             traj.running_terms_f = self.task.running_cost_terms_f(qpos, qvel, sensordata, controls)
             traj.terminal_terms_f = self.task.terminal_cost_terms_f(qpos[:, -1], qvel[:, -1], sensordata[:, -1])
+            traj.scores = self._score_hybrid(traj)
+        elif self.use_fpl_cost or self.use_fpl_discounted:
+            rf = self.task.running_cost_terms_f(qpos, qvel, sensordata, controls)
+            tf = self.task.terminal_cost_terms_f(qpos[:, -1], qvel[:, -1], sensordata[:, -1])
+            if self.fpl_term_indices is not None:
+                rf, tf = self._select_fpl_terms(rf, tf)
+            traj.running_terms_f = rf
+            traj.terminal_terms_f = tf
             traj.scores = self._score_fpl(traj)
+        elif self.use_fpl_layered:
+            # Grouped fulfillment atoms (e.g. per-joint) + task.fpl_groups partition.
+            traj.running_terms_f = self.task.running_cost_terms_f_grouped(qpos, qvel, sensordata, controls)
+            traj.terminal_terms_f = self.task.terminal_cost_terms_f_grouped(
+                qpos[:, -1], qvel[:, -1], sensordata[:, -1]
+            )
+            traj.scores = self._score_fpl_layered(traj)
         else:
             traj.running_terms = self.task.running_cost_terms(qpos, qvel, sensordata, controls)
             traj.terminal_terms = self.task.terminal_cost_terms(qpos[:, -1], qvel[:, -1], sensordata[:, -1])
@@ -170,6 +226,45 @@ class SamplingController:
         running  = traj.running_terms.sum(axis=(1, 2)) * dt   # (K,)
         terminal = traj.terminal_terms.sum(axis=-1)           # (K,)
         return running + terminal
+
+    def _select_fpl_terms(self, running_f: np.ndarray, terminal_f: np.ndarray):
+        # Restrict the fulfillment atoms to self.fpl_term_indices before scoring.
+        # _score_fpl assumes terminal terms are a PREFIX of the running terms (the
+        # i-th terminal ↔ i-th running; trailing running terms have no terminal), so
+        # order the selected indices that HAVE a terminal value (< n_term) first.
+        n_term = terminal_f.shape[-1]
+        sel = self.fpl_term_indices
+        with_term = [i for i in sel if i < n_term]
+        without_term = [i for i in sel if i >= n_term]
+        running_sel = running_f[..., with_term + without_term]
+        terminal_sel = terminal_f[..., with_term]
+        return running_sel, terminal_sel
+
+    def _score_hybrid(self, traj: Trajectory) -> np.ndarray:
+        # cost = Σ_targets (∫ quadratic penalty dt)  +  floor_weight · Σ_floors (∫ -log(f) dt)
+        # Target terms keep the unbounded quadratic's strong signal (reach/maximize);
+        # floor terms get an FPL log-barrier that blows up as the fulfillment → 0
+        # (a hard "never fail" safety floor). Which term indices are floors is set by
+        # the task; normal terms and FPL atoms are assumed index-aligned (true for g1,
+        # hopper). Smaller-is-better, so the standard softmax update consumes it directly.
+        dt = float(self.backend.dt)
+        n = traj.running_terms.shape[-1]
+        floors = [i for i in self.task.floor_term_indices if 0 <= i < n]
+        targets = [i for i in range(n) if i not in floors]
+
+        target_cost = (traj.running_terms[..., targets].sum(axis=(1, 2)) * dt
+                       + traj.terminal_terms[..., targets].sum(axis=-1))          # (K,)
+
+        if not floors:
+            return target_cost
+        barrier = -np.log(np.clip(traj.running_terms_f[..., floors], 1e-8, 1.0))  # (K,H,|floors|)
+        barrier_cost = barrier.sum(axis=(1, 2)) * dt
+        n_term_f = traj.terminal_terms_f.shape[-1]
+        term_floors = [i for i in floors if i < n_term_f]
+        if term_floors:
+            bt = -np.log(np.clip(traj.terminal_terms_f[..., term_floors], 1e-8, 1.0))
+            barrier_cost = barrier_cost + bt.sum(axis=-1)
+        return target_cost + self.floor_weight * barrier_cost
 
     def _score_fpl(self, traj: Trajectory) -> np.ndarray:
         # Convention: `terminal_terms_f` may return FEWER terms than
@@ -197,17 +292,25 @@ class SamplingController:
         norm_run = (1.0 - gamma) / (1.0 - gamma ** H) if H > 1 else 1.0
 
         if self.use_fpl_cost:
-            # Per-step scalar via power-mean, then discount over time.
-            # Terminal step's power-mean only sees terms that actually have a
-            # terminal value (the first n_term), so a "missing" term doesn't
-            # silently contribute 1.0.
+            # Per-step scalar via power-mean (conjunction over objectives), then
+            # aggregate over time. Terminal step's power-mean only sees terms that
+            # actually have a terminal value (the first n_term), so a "missing" term
+            # doesn't silently contribute 1.0.
             per_step_run = power_mean(running, self.fpl_p)                # (K, H)
             if n_term > 0:
                 per_step_term = power_mean(terminal, self.fpl_p)          # (K,)
                 per_step = np.concatenate([per_step_run, per_step_term[:, None]], axis=1)
-                reward = (per_step * discounts_full[None, :]).sum(axis=1) * norm_full
+                disc, norm = discounts_full, norm_full
             else:
-                reward = (per_step_run * discounts_run[None, :]).sum(axis=1) * norm_run
+                per_step = per_step_run
+                disc, norm = discounts_run, norm_run
+            if self.fpl_time_p is None:
+                # Original: discounted arithmetic mean over time.
+                reward = (per_step * disc[None, :]).sum(axis=1) * norm
+            else:
+                # Soft-min over time: value = (power-mean q<=0 of) the per-step
+                # composites, so one catastrophic step tanks the whole rollout.
+                reward = power_mean(per_step, self.fpl_time_p)            # (K,)
         else:  # use_fpl_discounted
             # Each term gets its own discount-sum across its lifetime,
             # normalized to [0,1] by its own finite-horizon factor, then
@@ -227,14 +330,67 @@ class SamplingController:
                     (running[..., n_term:] * discounts_run[:, None]).sum(axis=1) * norm_run
                 )
             per_term_sums = np.concatenate(chunks, axis=-1)               # (K, n_run)
+            # Expose the per-objective [0,1] vector (pre-collapse) so multi-objective
+            # controllers can form a separate gradient per objective. reward below is
+            # exactly power_mean(reward_terms, fpl_p).
+            traj.reward_terms = per_term_sums
             reward = power_mean(per_term_sums, self.fpl_p)                # (K,)
 
         # Expose the raw reward (positive, in [0,1], LARGER is better) so subclasses
         # that prefer reward semantics can argmax it directly. The returned scores
         # keep the cost convention (smaller is better) for backwards compatibility
         # with existing update_mean implementations.
+        #
+        # Cost is S_k = -log(u_k), NOT -u_k (FPL_MPPI_HANDOFF §3 step 4). Feeding
+        # this into the standard softmax exp(-(S_k - min S_k)/λ) yields
+        #   w_k ∝ (u_k / max_k u_k)^(1/λ)
+        # i.e. the handoff's w_k ∝ u_k^(1/λ) with the mandatory min-shift baked in.
+        # Using -log (rather than -u directly) is what gives the weights spread:
+        # near-catastrophic rollouts (u_k → 0) get a large cost instead of a raw
+        # value cramped into [0, 1]. `reward > 0` always (power_mean clips terms at
+        # eps=1e-8 and the discounted sum is over positives), so -log is finite.
         traj.reward = reward
-        return -reward
+        return -np.log(reward)
+
+    def _score_fpl_layered(self, traj: Trajectory) -> np.ndarray:
+        # Two-level composition (FPL_MPPI_HANDOFF §3, grouped): discount-sum each atom
+        # over time into an FQ-value in [0,1], inner-power-mean the atoms WITHIN each
+        # group (task.fpl_groups), then outer-power-mean the group scalars. Inner uses
+        # fpl_group_p (falls back to fpl_p); outer uses fpl_p. Cost = -log(reward), same
+        # convention as _score_fpl. Grouped atoms are all state-based, so terminal aligns
+        # 1:1 with running (every atom spans the full H+1 series).
+        gamma = self.fpl_gamma
+        running  = traj.running_terms_f    # (K, H, n)
+        terminal = traj.terminal_terms_f   # (K, n)
+        H, n = running.shape[1], running.shape[-1]
+        if terminal.shape[-1] != n:
+            raise ValueError(
+                f"layered FPL expects grouped terminal atoms aligned 1:1 with running "
+                f"atoms; got {terminal.shape[-1]} terminal vs {n} running"
+            )
+        groups = self.task.fpl_groups
+        if not groups:
+            raise ValueError(
+                f"task {type(self.task).__name__} defines no fpl_groups; "
+                f"layered FPL unavailable"
+            )
+        H1 = H + 1
+        discounts_full = gamma ** np.arange(H1, dtype=np.float64)   # (H+1,)
+        norm_full = (1.0 - gamma) / (1.0 - gamma ** H1)
+        # Per-atom discounted [0,1] value over the extended H+1 series (FQ-value analog).
+        extended = np.concatenate([running, terminal[:, None, :]], axis=1)   # (K, H+1, n)
+        per_term = (extended * discounts_full[:, None]).sum(axis=1) * norm_full  # (K, n)
+        # Inner power-mean within each group, then outer power-mean across the groups.
+        inner_p = self.fpl_p if self.fpl_group_p is None else self.fpl_group_p
+        group_scores = np.stack(
+            [power_mean(per_term[:, idx], inner_p) for idx in groups], axis=-1
+        )                                                                    # (K, n_groups)
+        # Per-group [0,1] vector (pre-collapse) for multi-objective composition; reward
+        # below is exactly power_mean(reward_terms, fpl_p) over the groups.
+        traj.reward_terms = group_scores
+        reward = power_mean(group_scores, self.fpl_p)                         # (K,)
+        traj.reward = reward
+        return -np.log(reward)
 
     # ---- warm-start: shift mean forward in time by dt ----
 
