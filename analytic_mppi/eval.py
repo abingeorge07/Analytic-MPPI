@@ -90,6 +90,8 @@ def make_controller(
     seed: int = 0,
     nthread: Optional[int] = None,
     cost_gd: Optional[Dict[str, Any]] = None,
+    task_kwargs: Optional[Dict[str, Any]] = None,
+    true_perturbation: Optional[Dict[str, float]] = None,
     **algo_kwargs: Any,
 ):
     """Build a fresh (task, backend, controller) triple.
@@ -104,10 +106,17 @@ def make_controller(
     `dict(gd_iterations=3, gd_lr=0.1)`) — the built controller is wrapped with
     BPTT cost-gradient refinement of its top-mu rollouts. Requires nq == nv
     (pendulum / walker / hopper).
+
+    `true_perturbation` (model-mismatch study): if given, the controller PLANS on the
+    nominal model while the returned backend (the "true" simulator that run_episode steps)
+    has its dynamics parameters scaled per this dict (see dynamics.apply_perturbation). This
+    is the sim-to-real gap: the controller's model is nominal, reality has drifted, and it
+    cannot retune for a drift it doesn't know about.
     """
     cls = _resolve_controller(controller)
-    task = make_task(task_name)
-    backend = MujocoBackend(task.model_path, nthread=nthread)
+    task = make_task(task_name, **(task_kwargs or {}))
+    # The controller always plans on the NOMINAL model (its belief).
+    plan_backend = MujocoBackend(task.model_path, nthread=nthread)
     common = dict(
         num_samples=num_samples,
         num_knots=num_knots,
@@ -117,10 +126,14 @@ def make_controller(
         seed=seed,
         **_fpl_kwargs(cost_mode, fpl_p, fpl_gamma),
     )
-    ctrl = cls(task, backend, **common, **algo_kwargs)
+    ctrl = cls(task, plan_backend, **common, **algo_kwargs)
     if cost_gd:
         wrap_controller_with_gd_refine(ctrl, **cost_gd)
-    return task, backend, ctrl
+    # run_episode steps the returned backend. Nominal (== plan_backend) unless a
+    # perturbation makes reality differ from the controller's model.
+    step_backend = (MujocoBackend(task.model_path, nthread=nthread, perturb=true_perturbation)
+                    if true_perturbation else plan_backend)
+    return task, step_backend, ctrl
 
 
 # ---------------------------------------------------------------------------
@@ -174,6 +187,9 @@ class Config:
     kwargs: Dict[str, Any] = field(default_factory=dict)
     cost_gd: Optional[Dict[str, Any]] = None   # e.g. dict(gd_iterations=3, gd_lr=0.1)
     fpl_p: Optional[float] = None              # power-mean exponent; None → make_controller default (0.1)
+    task_kwargs: Optional[Dict[str, Any]] = None  # per-config Task ctor overrides (e.g.
+                                               # dict(target_velocity=2.0)); merged over any
+                                               # study-level task_kwargs shared across configs.
 
 
 def _copy_or_none(x: Any) -> Optional[np.ndarray]:
@@ -205,6 +221,7 @@ def run_episode(
     cost_mode: str = "normal",
     init_fn: Optional[Callable[[Any], None]] = None,
     cost_gd: Optional[Dict[str, Any]] = None,
+    task_kwargs: Optional[Dict[str, Any]] = None,
     **build_kwargs: Any,
 ) -> Dict[str, np.ndarray]:
     """Run one closed-loop episode; return history arrays.
@@ -214,7 +231,8 @@ def run_episode(
     also returns alpha / obj_ess / obj_satisfaction, each (T, J).
     """
     task, backend, ctrl = make_controller(
-        task_name, controller, cost_mode=cost_mode, seed=seed, cost_gd=cost_gd, **build_kwargs
+        task_name, controller, cost_mode=cost_mode, seed=seed, cost_gd=cost_gd,
+        task_kwargs=task_kwargs, **build_kwargs
     )
     if init_fn is not None:
         init_fn(backend)
@@ -265,6 +283,7 @@ def run_study(
     seed0: int = 0,
     init_fn: Optional[Callable[[Any], None]] = None,
     progress: bool = True,
+    task_kwargs: Optional[Dict[str, Any]] = None,
     **shared_build_kwargs: Any,
 ) -> Dict[str, Dict[str, np.ndarray]]:
     """Run every config for `n_episodes` (seeds seed0..seed0+n_episodes-1) and
@@ -279,12 +298,14 @@ def run_study(
         if progress:
             print(f"running {cfg.label:40s}", end="", flush=True)
         fpl_p_kw = {} if cfg.fpl_p is None else {"fpl_p": cfg.fpl_p}
+        # Merge study-level task_kwargs (shared difficulty) with per-config overrides.
+        cfg_task_kwargs = {**(task_kwargs or {}), **(cfg.task_kwargs or {})}
         eps = []
         for ep in range(n_episodes):
             eps.append(run_episode(
                 task_name, cfg.controller, steps=steps, seed=seed0 + ep,
                 cost_mode=cfg.cost_mode, init_fn=init_fn, cost_gd=cfg.cost_gd,
-                **shared_build_kwargs, **cfg.kwargs, **fpl_p_kw,
+                task_kwargs=cfg_task_kwargs, **shared_build_kwargs, **cfg.kwargs, **fpl_p_kw,
             ))
             if progress:
                 print(".", end="", flush=True)
@@ -386,6 +407,25 @@ def g1_panels() -> List[tuple]:
     return [
         ("height_err", "Torso height error", "|z − z*|  (m)", False),
         ("upright", "Torso uprightness", "rot(ẑ)·ẑ  (1=upright)", False),
+        ("u_mag", "Control usage", "mean |u|", False),
+    ]
+
+
+def g1_walk_metrics(res: Dict[str, np.ndarray], task) -> Dict[str, np.ndarray]:
+    """fwd_vel = world-frame torso vx; upright = rot(ẑ)·ẑ; height_err; u_mag."""
+    sd, ctrls = res["sd"], res["ctrls"]
+    fwd_vel = sd[..., task._linvel_adr]                    # torso linvel x (world frame)
+    upright = task._torso_orientation(sd)[..., 2]
+    height_err = np.abs(task._torso_height(sd) - task.target_height)
+    return dict(fwd_vel=fwd_vel, upright=upright, height_err=height_err,
+                u_mag=np.abs(ctrls).mean(axis=-1))
+
+
+def g1_walk_panels() -> List[tuple]:
+    return [
+        ("fwd_vel", "Forward speed", "torso vx  (m/s)", False),
+        ("upright", "Torso uprightness", "rot(ẑ)·ẑ  (1=upright)", False),
+        ("height_err", "Torso height error", "|z − z*|  (m)", False),
         ("u_mag", "Control usage", "mean |u|", False),
     ]
 

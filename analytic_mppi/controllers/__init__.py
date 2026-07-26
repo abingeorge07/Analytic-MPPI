@@ -17,6 +17,7 @@ from analytic_mppi.controllers.dial import DIAL
 from analytic_mppi.controllers.predictive_sampling import PredictiveSampling
 from analytic_mppi.controllers.experimental import FplGmmSampler
 from analytic_mppi.controllers.composed_gradient import ComposedGradientMPPI
+from analytic_mppi.controllers.fpl_adaptive import FplAdaptiveMPPI
 
 
 # Legacy controllers (full-horizon callable-cost API) -- selected by `variant=...`
@@ -35,6 +36,7 @@ SAMPLING_CONTROLLERS: dict[str, type] = {
     "predictive_sampling": PredictiveSampling,
     "fpl_gmm": FplGmmSampler,
     "composed_grad": ComposedGradientMPPI,
+    "fpl_adaptive": FplAdaptiveMPPI,
 }
 
 
@@ -68,7 +70,7 @@ def list_sampling_controllers() -> list[str]:
 
 __all__ = [
     "MPPI", "MPPIv2", "MppiCma", "CEM", "DIAL", "PredictiveSampling", "FplGmmSampler",
-    "ComposedGradientMPPI",
+    "ComposedGradientMPPI", "FplAdaptiveMPPI",
     "CONTROLLERS", "SAMPLING_CONTROLLERS",
     "get_controller_class", "get_sampling_controller_class",
     "list_controllers", "list_sampling_controllers",

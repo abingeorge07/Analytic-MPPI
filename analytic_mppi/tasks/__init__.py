@@ -8,6 +8,7 @@ from .pendulum import PendulumTask
 from .walker import WalkerTask
 from .cube import CubeRotationTask
 from .g1_standup import G1StandupTask
+from .g1_walk import G1WalkTask, G1ReachTask
 from .hopper import HopperTask
 
 
@@ -16,6 +17,8 @@ TASKS: Dict[str, Type[Task]] = {
     "walker": WalkerTask,
     "cube": CubeRotationTask,
     "g1_standup": G1StandupTask,
+    "g1_walk": G1WalkTask,
+    "g1_reach": G1ReachTask,
     "hopper": HopperTask,
 }
 
@@ -35,6 +38,8 @@ __all__ = [
     "WalkerTask",
     "CubeRotationTask",
     "G1StandupTask",
+    "G1WalkTask",
+    "G1ReachTask",
     "HopperTask",
     "TASKS",
     "make_task",

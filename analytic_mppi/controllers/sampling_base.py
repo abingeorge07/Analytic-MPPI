@@ -76,6 +76,12 @@ class SamplingController:
         fpl_p: float = 0.1,
         fpl_gamma: float = 0.99,
         fpl_time_p: Optional[float] = None,
+        # Per-objective weights for the objective-axis power-mean collapse (broadcast to
+        # the atom/group axis, auto-normalized). None -> uniform. Together with fpl_p this
+        # spans baseline<->FPL: (fpl_p=1, fpl_weights=w) is a LINEAR scalarization Σ w_i f_i
+        # (vary w -> the whole "linear-weight family"); (fpl_p<0, uniform) is FPL. Used by
+        # the discounted collapse and the layered OUTER collapse (across groups).
+        fpl_weights: Optional[Sequence[float]] = None,
         # Inner power-mean exponent for layered FPL (across atoms WITHIN a group, e.g.
         # per-joint). None -> reuse fpl_p (same conjunctiveness inner and outer).
         fpl_group_p: Optional[float] = None,
@@ -117,6 +123,8 @@ class SamplingController:
         # a rollout's value is dominated by its WORST moment. This is what makes the
         # min-fulfillment floor hold across the whole trajectory, not just per-step.
         self.fpl_time_p = None if fpl_time_p is None else float(fpl_time_p)
+        self.fpl_weights = (None if fpl_weights is None
+                            else np.asarray(fpl_weights, dtype=np.float64))
         self.fpl_group_p = None if fpl_group_p is None else float(fpl_group_p)
         self.use_hybrid = bool(use_hybrid)
         self.floor_weight = float(floor_weight)
@@ -295,10 +303,13 @@ class SamplingController:
             # Per-step scalar via power-mean (conjunction over objectives), then
             # aggregate over time. Terminal step's power-mean only sees terms that
             # actually have a terminal value (the first n_term), so a "missing" term
-            # doesn't silently contribute 1.0.
-            per_step_run = power_mean(running, self.fpl_p)                # (K, H)
+            # doesn't silently contribute 1.0. Weights (if any) are on the OBJECTIVE
+            # axis; the terminal slice uses the matching prefix.
+            w = self.fpl_weights
+            w_term = None if w is None else w[:n_term]
+            per_step_run = power_mean(running, self.fpl_p, weights=w)      # (K, H)
             if n_term > 0:
-                per_step_term = power_mean(terminal, self.fpl_p)          # (K,)
+                per_step_term = power_mean(terminal, self.fpl_p, weights=w_term)  # (K,)
                 per_step = np.concatenate([per_step_run, per_step_term[:, None]], axis=1)
                 disc, norm = discounts_full, norm_full
             else:
@@ -334,7 +345,7 @@ class SamplingController:
             # controllers can form a separate gradient per objective. reward below is
             # exactly power_mean(reward_terms, fpl_p).
             traj.reward_terms = per_term_sums
-            reward = power_mean(per_term_sums, self.fpl_p)                # (K,)
+            reward = power_mean(per_term_sums, self.fpl_p, weights=self.fpl_weights)  # (K,)
 
         # Expose the raw reward (positive, in [0,1], LARGER is better) so subclasses
         # that prefer reward semantics can argmax it directly. The returned scores
@@ -388,7 +399,7 @@ class SamplingController:
         # Per-group [0,1] vector (pre-collapse) for multi-objective composition; reward
         # below is exactly power_mean(reward_terms, fpl_p) over the groups.
         traj.reward_terms = group_scores
-        reward = power_mean(group_scores, self.fpl_p)                         # (K,)
+        reward = power_mean(group_scores, self.fpl_p, weights=self.fpl_weights)  # (K,)
         traj.reward = reward
         return -np.log(reward)
 

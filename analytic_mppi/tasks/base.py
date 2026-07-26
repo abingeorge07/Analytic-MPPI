@@ -23,19 +23,31 @@ import numpy as np
 import mujoco
 
 
-def power_mean(terms: np.ndarray, p: float, eps: float = 1e-8) -> np.ndarray:
+def power_mean(terms: np.ndarray, p: float, eps: float = 1e-8,
+               weights: "np.ndarray | None" = None) -> np.ndarray:
     """Generalized (power) mean along the LAST axis of `terms`.
 
-    p == 0  -> geometric mean exp(mean(log x))
-    p != 0  -> (mean(x**p))**(1/p)
+    p == 0  -> geometric mean exp(Σ w_i log x_i)
+    p != 0  -> (Σ w_i x_i**p)**(1/p)
 
-    Terms are clipped from below by `eps` so log/division stay finite.
+    `weights` (broadcastable to the last axis, need not be normalized) makes this a
+    WEIGHTED power-mean; None -> uniform 1/n. This is the single knob that spans the
+    baseline<->FPL axis: p=1 with weights w is exactly a LINEAR scalarization Σ w_i x_i
+    (sweep w -> the whole "linear-weight family"); p<0 with uniform weights is the FPL
+    min-fulfillment conjunction. Terms are clipped from below by `eps` so log/division
+    stay finite.
     """
     t = np.clip(terms, eps, None)
+    if weights is None:
+        n = t.shape[-1]
+        if p == 0:
+            return np.exp(np.mean(np.log(t), axis=-1))
+        return (np.sum(t ** p, axis=-1) / n) ** (1.0 / p)
+    w = np.asarray(weights, dtype=np.float64)
+    w = w / w.sum(axis=-1, keepdims=True)      # normalize so Σ w_i = 1
     if p == 0:
-        return np.exp(np.mean(np.log(t), axis=-1))
-    n = t.shape[-1]
-    return (np.sum(t ** p, axis=-1) / n) ** (1.0 / p)
+        return np.exp(np.sum(w * np.log(t), axis=-1))
+    return (np.sum(w * t ** p, axis=-1)) ** (1.0 / p)
 
 
 class Task:

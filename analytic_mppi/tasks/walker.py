@@ -64,20 +64,36 @@ class WalkerTask(Task):
         return out
 
     # ---- FPL cost ----
+    # Atom shapes mirror the improved HOPPER atoms (the walker's original Gaussian/generous
+    # shapes were superseded): one-sided velocity ramp (spread, no reward for exceeding),
+    # orientation that decays to 0 BEFORE horizontal (a real upright floor, not 0.5 at
+    # horizontal), one-sided height that decays before the fall cliff. These are SHARED by
+    # both the linear family (p=1) and FPL (p<0) — only the composition differs — so the
+    # comparison stays apples-to-apples; only the objective scalarization is the variable.
 
     def _height_fulfillment(self, sensordata: np.ndarray) -> np.ndarray:
-        # 1 at target height, decays with deviation, gentle band.
-        err = self._torso_height(sensordata) - self.target_height
-        return np.exp(-(err ** 2) / (0.1 ** 2))
+        # One-sided saturating band: full credit at/above h_full, linearly to 0 at h_floor
+        # (well above the collapsed-torso height, so it decays BEFORE the fall). No penalty
+        # for being taller than target — a walker's torso bobs up during a stride.
+        h = self._torso_height(sensordata)
+        h_full, h_floor = 1.1, 0.7
+        return np.clip((h - h_floor) / (h_full - h_floor), 0.0, 1.0)
 
     def _orientation_fulfillment(self, sensordata: np.ndarray) -> np.ndarray:
-        # zax dot (0,0,1) in [-1,1] -> shift to [0,1]
+        # zaxis_z = cos(tilt): 1 upright, 0 horizontal. Full credit near upright (z_full),
+        # decaying to 0 by z_floor (≈ cos 53°) — BEFORE horizontal, so uprightness is a real
+        # floor (the old (z+1)/2 gave 0.5 at horizontal, too generous to ever bind).
         z = self._torso_zaxis_z(sensordata)
-        return np.clip((z + 1.0) * 0.5, 0.0, 1.0)
+        z_full, z_floor = 0.95, 0.6
+        return np.clip((z - z_floor) / (z_full - z_floor), 0.0, 1.0)
 
     def _velocity_fulfillment(self, sensordata: np.ndarray) -> np.ndarray:
-        err = self._torso_vel_x(sensordata) - self.target_velocity
-        return np.exp(-(err ** 2) / (0.5 ** 2))
+        # One-sided LINEAR ramp: proportional credit vx/target, capped at 1 at/above target,
+        # no credit for backward. Gives the conjunction spread to discriminate on (the old
+        # Gaussian pinned this atom near 0 for nearly every short rollout), and one-sided so
+        # there's no incentive to sprint past target into a fall (FPL_MPPI_HANDOFF §6).
+        vx = self._torso_vel_x(sensordata)
+        return np.clip(vx / self.target_velocity, 0.0, 1.0)
 
     def _control_fulfillment(self, u: np.ndarray) -> np.ndarray:
         return np.clip(1.0 - np.mean(u ** 2, axis=-1), 0.0, 1.0)
@@ -94,14 +110,14 @@ class WalkerTask(Task):
         )
 
     def terminal_cost_terms_f(self, qpos, qvel, sensordata) -> np.ndarray:
-        f1 = self._height_fulfillment(sensordata)
-        ones = np.ones_like(f1)
+        # Control fulfillment is undefined at the terminal step (no action applied), so return
+        # only the 3 state-based atoms; _score_fpl handles n_term < n_run (matches hopper).
+        # Avoids a constant-1 placeholder silently inflating the terminal composite.
         return np.stack(
             [
-                f1,
+                self._height_fulfillment(sensordata),
                 self._orientation_fulfillment(sensordata),
                 self._velocity_fulfillment(sensordata),
-                ones,
             ],
             axis=-1,
         )

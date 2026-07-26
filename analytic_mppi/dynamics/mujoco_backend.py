@@ -8,6 +8,33 @@ import mujoco
 from mujoco import rollout as mj_rollout
 
 
+def apply_perturbation(model: "mujoco.MjModel", perturb: dict) -> None:
+    """Scale dynamics parameters of `model` IN PLACE for a model-mismatch study.
+
+    Keys (each an optional multiplicative scale, 1.0 = no change):
+      mass_scale     — body_mass and body_inertia (heavier/lighter robot / payload)
+      gain_scale     — actuator_gainprm[:,0] (stronger/weaker actuators)
+      friction_scale — geom_friction[:,0] (grippier/slipperier ground & contacts)
+      damping_scale  — dof_damping (more/less joint damping)
+    Used to make a SEPARATE "true" backend whose dynamics differ from the controller's
+    nominal planning model, so we can measure how gracefully FPL vs a fixed linear cost
+    degrade as reality drifts from the model (you cannot retune weights for an unknown drift).
+    """
+    unknown = set(perturb) - {"mass_scale", "gain_scale", "friction_scale", "damping_scale"}
+    if unknown:
+        raise KeyError(f"unknown perturbation key(s) {sorted(unknown)}; expected a subset of "
+                       f"mass_scale/gain_scale/friction_scale/damping_scale")
+    if (s := perturb.get("mass_scale", 1.0)) != 1.0:
+        model.body_mass[:] *= s
+        model.body_inertia[:] *= s
+    if (s := perturb.get("gain_scale", 1.0)) != 1.0:
+        model.actuator_gainprm[:, 0] *= s
+    if (s := perturb.get("friction_scale", 1.0)) != 1.0:
+        model.geom_friction[:, 0] *= s
+    if (s := perturb.get("damping_scale", 1.0)) != 1.0:
+        model.dof_damping[:] *= s
+
+
 class MujocoBackend:
     """MuJoCo-backed dynamics for MPPI.
 
@@ -23,9 +50,14 @@ class MujocoBackend:
 
     state_spec = mujoco.mjtState.mjSTATE_FULLPHYSICS
 
-    def __init__(self, model_path: str | os.PathLike, nthread: int | None = None):
+    def __init__(self, model_path: str | os.PathLike, nthread: int | None = None,
+                 perturb: dict | None = None):
         self.model_path = Path(model_path)
         self.model = mujoco.MjModel.from_xml_path(str(self.model_path))
+        # Optional dynamics-parameter perturbation (model-mismatch study). Applied before
+        # MjData/thread_data are created so every rollout + step sees the perturbed model.
+        if perturb:
+            apply_perturbation(self.model, perturb)
         self.data = mujoco.MjData(self.model)
         mujoco.mj_forward(self.model, self.data)
 

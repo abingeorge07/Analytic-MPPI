@@ -98,6 +98,9 @@ def _algo_kwargs(name):
         # ComposedGradientMPPI requires a per-objective FPL vector (discounted here).
         "composed_grad": dict(noise_level=0.5, temperature=1.0,
                               use_fpl_discounted=True, fpl_p=0.1, fpl_gamma=0.99),
+        # FplAdaptiveMPPI default steer_mode="binding" needs a per-objective FPL vector.
+        "fpl_adaptive": dict(temperature=1.0, use_fpl_discounted=True, fpl_p=0.1,
+                             fpl_gamma=0.99),
     }[name]
 
 
@@ -145,6 +148,34 @@ def test_power_mean_p1_equals_arithmetic_mean():
     from analytic_mppi.tasks.base import power_mean
     x = np.random.default_rng(0).uniform(0.01, 1.0, size=(5, 4))
     assert np.allclose(power_mean(x, 1.0), x.mean(axis=-1))
+
+
+def test_weighted_power_mean_is_linear_family():
+    """power_mean(x, p=1, weights=w) == Σ w_i x_i (normalized) — the whole LINEAR-weight
+    family. Uniform weights reproduce the unweighted mean for any p (the FPL side)."""
+    from analytic_mppi.tasks.base import power_mean
+    x = np.random.default_rng(1).uniform(0.05, 1.0, size=(6, 4))
+    w = np.array([0.1, 0.2, 0.3, 0.4])
+    assert np.allclose(power_mean(x, 1.0, weights=w), (x * w).sum(-1) / w.sum())
+    for p in (1.0, 0.0, -1.0, -2.0):
+        assert np.allclose(power_mean(x, p), power_mean(x, p, weights=np.ones(4)))
+
+
+def test_fpl_weights_recover_single_atom_and_uniform():
+    """MPPIv2 fpl_weights on the discounted collapse: a near-one-hot weight makes the
+    composite track that atom's FQ-value; uniform weights == the unweighted reward."""
+    from analytic_mppi.tasks.base import power_mean
+    task = make_task("hopper")
+    backend = MujocoBackend(task.model_path, nthread=2)
+    base = MPPIv2(task, backend, use_fpl_discounted=True, fpl_p=1.0, fpl_gamma=0.99,
+                  noise_level=0.4, temperature=1.0, **_PENDULUM_RUN)
+    traj = base._rollout_and_score(backend.get_state())
+    V = traj.reward_terms                                   # (K, n_atoms) FQ-values
+    # uniform weights reproduce the unweighted p=1 composite
+    assert np.allclose(traj.reward, power_mean(V, 1.0))
+    # a near-one-hot weight on atom 2 (velocity) makes the composite ~ that atom
+    w = np.array([1e-6, 1e-6, 1.0, 1e-6])
+    assert np.allclose(power_mean(V, 1.0, weights=w), V[:, 2], atol=1e-3)
 
 
 def test_fpl_score_is_neg_log_reward_and_weighted_average():
@@ -319,3 +350,102 @@ def test_composed_gradient_closed_loop_nonconstant():
         actions.append(u.copy())
         state = backend.step(u)
     assert np.asarray(actions).std() > 1e-3
+
+
+# -------------- FplAdaptiveMPPI (FPL-informed adaptive-covariance sampler) ----
+
+def test_fpl_adaptive_binding_requires_per_objective_fpl():
+    """steer_mode='binding' needs the per-objective vector (fpl_discounted/layered);
+    normal cost and fpl_cost (no vector) must be rejected."""
+    from analytic_mppi.controllers import FplAdaptiveMPPI
+    task = make_task("pendulum")
+    backend = MujocoBackend(task.model_path, nthread=2)
+    with pytest.raises(ValueError):
+        FplAdaptiveMPPI(task, backend, steer_mode="binding", temperature=1.0, **_PENDULUM_RUN)
+    with pytest.raises(ValueError):
+        FplAdaptiveMPPI(task, backend, steer_mode="binding", use_fpl_cost=True, fpl_p=0.1,
+                        temperature=1.0, **_PENDULUM_RUN)
+
+
+def test_fpl_adaptive_scalar_gap_runs_on_normal_cost():
+    """The mirror-able ablation (steer='scalar', explore='gap') needs no FPL vector, so it
+    runs on plain cost — this is the fair non-FPL baseline for A/B sampling comparisons."""
+    from analytic_mppi.controllers import FplAdaptiveMPPI
+    task = make_task("pendulum")
+    backend = MujocoBackend(task.model_path, nthread=2)
+    ctrl = FplAdaptiveMPPI(task, backend, steer_mode="scalar", explore_mode="gap",
+                           temperature=1.0, **_PENDULUM_RUN)
+    state = backend.get_state()
+    for _ in range(20):
+        u = ctrl.act(state)
+        assert np.all(np.isfinite(u))
+        state = backend.step(u)
+    assert ctrl.last_commit is not None and 0.0 <= ctrl.last_commit <= 1.0
+
+
+def test_fpl_adaptive_binding_closed_loop_and_diagnostics():
+    """Binding-steered FPL sampler: finite, varying actions; sigma stays within [floor,ceil];
+    the binding-objective index and commitment scalar are exposed."""
+    from analytic_mppi.controllers import FplAdaptiveMPPI
+    task = make_task("pendulum")
+    backend = MujocoBackend(task.model_path, nthread=2)
+    ctrl = FplAdaptiveMPPI(task, backend, use_fpl_discounted=True, fpl_p=0.1, fpl_gamma=0.99,
+                           steer_mode="binding", explore_mode="absolute", temperature=1.0,
+                           sigma_floor=0.05, sigma_ceil=1.2, iterations=2, **_PENDULUM_RUN)
+    state = backend.get_state()
+    actions = []
+    for _ in range(25):
+        u = ctrl.act(state)
+        assert np.all(np.isfinite(u))
+        actions.append(u.copy())
+        state = backend.step(u)
+    assert np.asarray(actions).std() > 1e-3
+    assert np.all(ctrl.sigma >= ctrl.sigma_floor - 1e-9)
+    assert np.all(ctrl.sigma <= ctrl.sigma_ceil + 1e-9)
+    assert ctrl.last_binding_obj is not None
+    assert 0.0 <= ctrl.last_commit <= 1.0
+
+
+# --------------------------- model-mismatch perturbation ---------------------------
+
+def test_apply_perturbation_scales_params():
+    """apply_perturbation scales the requested model arrays in place; unknown keys raise."""
+    from analytic_mppi.dynamics import apply_perturbation
+    task = make_task("hopper")
+    b = MujocoBackend(task.model_path, nthread=2)
+    m0_mass = b.model.body_mass.copy()
+    m0_gain = b.model.actuator_gainprm[:, 0].copy()
+    m0_fric = b.model.geom_friction[:, 0].copy()
+    apply_perturbation(b.model, dict(mass_scale=1.5, gain_scale=0.5, friction_scale=0.25))
+    assert np.allclose(b.model.body_mass, 1.5 * m0_mass)
+    assert np.allclose(b.model.actuator_gainprm[:, 0], 0.5 * m0_gain)
+    assert np.allclose(b.model.geom_friction[:, 0], 0.25 * m0_fric)
+    with pytest.raises(KeyError):
+        apply_perturbation(b.model, dict(bogus_scale=2.0))
+
+
+def test_true_perturbation_splits_plan_and_step_models():
+    """make_controller with true_perturbation: the controller plans on the NOMINAL model
+    while the returned (true) backend has perturbed dynamics — so the two step differently
+    under the same control."""
+    from analytic_mppi.eval import make_controller
+    common = dict(num_samples=8, plan_horizon=0.4, num_knots=4, spline_type="zero",
+                  cost_mode="fpl_cost", noise_level=0.3, temperature=0.2, fpl_p=-1.0)
+    _, plan_backend, ctrl = make_controller("hopper", "mppi", **common)          # nominal
+    _, true_backend, _ = make_controller("hopper", "mppi",
+                                         true_perturbation=dict(mass_scale=2.0), **common)
+    # The controller's own backend (planning) is nominal, distinct from a perturbed true one.
+    assert ctrl.backend is plan_backend
+    assert np.allclose(ctrl.backend.model.body_mass, plan_backend.model.body_mass)
+    assert np.allclose(true_backend.model.body_mass, 2.0 * plan_backend.model.body_mass)
+    # Same NONZERO control from the same initial state evolves differently under the perturbed
+    # model. (Zero control would fall identically — gravitational acceleration is mass-
+    # independent — so drive the actuators, whose forces give mass-dependent accelerations.)
+    u = np.full(true_backend.nu, 0.5)
+    s0 = plan_backend.get_state()
+    plan_backend.set_state(s0)
+    true_backend.set_state(s0)
+    for _ in range(20):
+        plan_backend.step(u)
+        true_backend.step(u)
+    assert not np.allclose(plan_backend.get_state(), true_backend.get_state())

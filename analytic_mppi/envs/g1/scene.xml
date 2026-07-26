@@ -18,6 +18,10 @@
 
   <worldbody>
     <geom name="floor" size="0 0 0.05" type="plane" material="groundplane"/>
+    <!-- Side-on camera that tracks the whole-model COM, so a walking robot stays in
+         frame for the g1_walk videos (trackcom keeps a fixed offset from the COM).
+         Additive only — does not affect dynamics, sensors, or the standup task. -->
+    <camera name="track" pos="0 -2.6 1.2" xyaxes="1 0 0 0 0 1" mode="trackcom"/>
   </worldbody>
 
   <sensor>

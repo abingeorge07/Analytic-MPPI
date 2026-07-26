@@ -1,0 +1,227 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{xcolor}
+\usepackage[colorlinks=true,linkcolor=blue,urlcolor=blue]{hyperref}
+\usepackage{enumitem}
+
+% Figures live in ../verification/
+\graphicspath{{../verification/}}
+
+\newcommand{\fpl}{\textsc{fpl}}
+\newcommand{\mppi}{\textsc{mppi}}
+\newcommand{\claim}[1]{\textbf{\textcolor{blue!60!black}{#1}}}
+
+\title{\vspace{-2em}Should we publish the \fpl$\times$\mppi{} results?\\
+\large A memo, with the evidence laid out and the case argued honestly}
+\author{}
+\date{\today}
+
+\begin{document}
+\maketitle
+\vspace{-2.5em}
+
+\begin{abstract}
+\noindent This is a memo to myself (and you) making the case, for and against, that the
+current results are worth writing up. Short version: \emph{yes}, but the paper should be
+built around the \textbf{model-mismatch robustness} result, not the raw performance numbers.
+The performance win alone ($+$22--67\% speed at matched safety on two locomotion tasks) is
+real but invites the reviewer reflex ``\,so retune your linear weights.\,'' The robustness
+result closes that door: a \emph{single fixed} \fpl{} objective dominates the entire
+linear-weight family across a $3.3\times$ ground-friction change with \emph{no retuning}, on
+two distinct robots---and you cannot retune a hand-weighted cost for a model error you do not
+know about. That is a structural, un-tunable property, which is the kind of thing that gets
+published. The honest negative results (where \fpl{} does \emph{not} help) make the story more
+credible, not less.
+\end{abstract}
+
+\section{What we actually claim}
+
+We study a single design choice inside sampling-based model-predictive control (\mppi):
+how a vector of objectives is collapsed into the scalar cost that weights the sampled
+rollouts. The standard choice is a \textbf{hand-weighted linear sum}
+$S = \sum_i w_i c_i$. We replace it with \textbf{Fulfillment-Priority Logic} (\fpl):
+each objective is mapped to a fulfillment $f_i\in[0,1]$ and composed with a
+power mean $\mu_p(f)=\big(\tfrac1n\sum_i f_i^{\,p}\big)^{1/p}$ using $p<0$
+(a soft-min / conjunction that weights the least-satisfied objective most).
+\emph{Everything else in the controller is held identical}; only the scalarization changes.
+Because $\mu_p(f;p{=}1)=\sum_i w_i f_i$ is exactly the linear sum, the linear family is a
+strict special case, and ``the linear-weight family'' is a one-parameter sweep we compare
+against \emph{at its best}, not its worst.
+
+\medskip
+\noindent Three empirical claims, in increasing order of how much I think they matter:
+
+\begin{enumerate}[leftmargin=1.4em,itemsep=2pt]
+\item \claim{Dynamic-competition dominance.} When objectives compete \emph{dynamically}
+      (going faster unavoidably risks a fall), one fixed \fpl{} spec Pareto-dominates the
+      entire linear-weight family on the (speed, survival) plane, with no per-operating-point
+      retuning. Shown on Hopper and Walker2d.
+\item \claim{An honest boundary.} That dominance \emph{disappears} when a safe conservative
+      operating point exists (quasi-static tasks) or the task is unachievable for the
+      planner. We show two such nulls. This is a scientific boundary, not a failure.
+\item \claim{Un-tunable robustness (the headline).} Under model mismatch that punishes
+      aggression (traction loss), the single fixed \fpl{} spec keeps the highest
+      \emph{productive speed} (speed $\times$ survival) at every mismatch level on both robots,
+      while every fixed linear weight either was already unsafe or degrades---and no retuning
+      is possible because the mismatch is unknown at design time.
+\end{enumerate}
+
+\section{The evidence}
+
+\paragraph{Fairness protocol.} Identical sampler, fulfillment atoms, sample budget, planning
+horizon, and temporal aggregation for \emph{every} configuration. The only variable is the
+composition: $p{=}1$ with swept weights (the linear family) versus $p{<}0$ uniform (\fpl).
+We always compare against the \emph{best} linear weight, not the aggressive one that trivially
+face-plants. On the mismatch study, the controller plans on the nominal model and executes on
+a perturbed ``true'' simulator; \emph{no controller is retuned across mismatch levels.}
+
+\paragraph{1. Dynamic-competition dominance (Fig.~\ref{fig:pareto}).}
+On both robots a single \fpl{} point sits above-and-right of the whole linear frontier at every
+commanded speed. Headline numbers, fastest linear at $\le$ \fpl's fall rate:
+
+\begin{center}\small
+\begin{tabular}{lccc}
+\toprule
+ & Hopper (tv$=3$) & Walker (tv$=4$) & Walker (tv$=6$) \\
+\midrule
+\fpl{} (one fixed spec) & 0.925\,m/s @ 19\% fall & 1.17\,m/s @ 0\% & 1.20\,m/s @ 0\% \\
+best equally-safe linear & 0.554\,m/s & 0.77\,m/s & 0.92\,m/s \\
+\fpl{} advantage & \textbf{+67\%} & \textbf{+52\%} & \textbf{+30\%} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{hopper_pareto.png}\\[4pt]
+\includegraphics[width=\linewidth]{walker_pareto.png}
+\caption{\textbf{One fixed \fpl{} spec dominates the linear-weight family under dynamic
+competition, no retuning.} Top: Hopper. Bottom: Walker2d (running regime). At every commanded
+speed the \fpl{} star is faster \emph{and} safer than any comparably-safe linear weight; the
+linear family traces a speed$\leftrightarrow$survival tradeoff that \fpl{} sits above.}
+\label{fig:pareto}
+\end{figure}
+
+\paragraph{2. The honest boundary (nulls).} On a quasi-static humanoid lean-and-hold task,
+a \emph{conservative} linear weight matches or beats \fpl{} at every difficulty, because a safe
+low-risk operating point exists. On humanoid walking-from-stand, the planner's short horizon
+cannot walk it and \emph{both} controllers collapse. These delimit the claim: ``objectives
+compete'' is not sufficient---the competition must be dynamic and unavoidable. (An early
+version of this project over-claimed a humanoid win from an uprightness-only metric; rendering
+the video exposed a seated collapse. We now co-check height and inspect video before claiming.
+That discipline is worth a paragraph in the paper: it is why the remaining claims are trustworthy.)
+
+\paragraph{3. Un-tunable robustness (Fig.~\ref{fig:robust}).} The controller plans on the
+nominal model; the true ground friction is reduced (traction loss---ice / wet / wear, the
+canonical sim-to-real gap). Productive speed (speed $\times$ survival), no retuning:
+
+\begin{center}\small
+\begin{tabular}{lcccc}
+\toprule
+traction loss $(1-\text{friction})$ & 0.0 & 0.4 & 0.55 & 0.7 \\
+\midrule
+best fixed linear (Hopper) & 0.62 & 0.81 & 0.62 & 0.46 \\
+\fpl{} (Hopper) & \textbf{0.73} & \textbf{0.94} & \textbf{0.80} & \textbf{0.62} \\
+\midrule
+best fixed linear (Walker) & 0.98 & 0.98 & 0.98 & 0.93 \\
+\fpl{} (Walker) & \textbf{1.20} & \textbf{1.10} & \textbf{1.14} & \textbf{1.09} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent The fixed \fpl{} spec is best at \emph{every} mismatch level on both robots, at
+$\sim$100\% survival, and its margin on the hopper \emph{grows} with mismatch (+18\% at
+nominal $\to$ +126\% at the slipperiest). No fixed linear weight matches it: the aggressive
+weights' survival collapses, the safe weight crawls, and on the hopper the \emph{best} linear
+weight even changes with the (unknown) friction.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.92\linewidth]{mismatch_robustness.png}\\[4pt]
+\includegraphics[width=0.92\linewidth]{mismatch_robustness_walker.png}
+\caption{\textbf{Un-tunable robustness to traction loss.} Planner uses the nominal model;
+reality is slippery; no controller is retuned. Top: Hopper. Bottom: Walker2d. A single fixed
+\fpl{} spec (red) keeps the highest productive speed and holds survival across a $3.3\times$
+friction reduction; the linear family cannot---aggressive weights lose survival, the safe
+weight loses speed, and which weight is ``best'' shifts with the friction you don't know.}
+\label{fig:robust}
+\end{figure}
+
+\section{Why this is publishable}
+
+\begin{enumerate}[leftmargin=1.4em,itemsep=3pt]
+\item \claim{It answers the obvious objection.} A performance edge on a tradeoff curve always
+      invites ``retune the baseline.'' The robustness result is defined precisely by the
+      \emph{impossibility} of retuning: the mismatch is unknown at design time. This converts
+      ``\fpl{} is a better tuning'' into ``\fpl{} needs no tuning and a linear cost
+      \emph{cannot} be tuned for this,'' which is a structural claim.
+\item \claim{It matches theory the field already believes.} The information-theoretic \mppi{}
+      literature (Williams et al.) fixes the sampling distribution and hand-weights the cost;
+      robust/tube \mppi{} adds machinery to the \emph{sampler/dynamics}. We instead change the
+      \emph{objective algebra} and show it buys robustness for free, which is an unusual and
+      clean lever. \fpl{}'s minimum-fulfillment bound predicts exactly the observed behavior
+      (a high conjunction guarantees a floor on every objective), giving the empirics a
+      mechanism rather than a coincidence.
+\item \claim{The negative results are a feature.} We show \emph{when} \fpl{} does not help
+      (static tasks, uniform-difficulty mismatch such as added mass) and give a one-line
+      predictive rule: \fpl{} wins iff the mismatch/competition makes \emph{aggression
+      dangerous while safe progress remains possible}. A method paper that states its own
+      boundary is more, not less, credible---and the rule is testable.
+\item \claim{Reproducible and cheap.} Pure-CPU \mppi{}, standard MuJoCo robots, five
+      self-contained scripts, seeds and figures regenerable from cached data. No learned
+      components to muddy attribution.
+\end{enumerate}
+
+\section{Where it is weak (so we decide with eyes open)}
+
+\begin{itemize}[leftmargin=1.4em,itemsep=2pt]
+\item \emph{Tasks are classic but simple} (Hopper, Walker2d). We could not get a humanoid to
+      walk from scratch with this planner, so the flashiest demo is absent. Honest, but a
+      reviewer will note it.
+\item \emph{Scope of the robustness win is narrow}: it holds for traction/aggression-punishing
+      mismatch, not for uniform-difficulty mismatch (mass, actuator strength). We must state
+      this plainly; over-claiming ``\fpl{} is universally robust'' would be false.
+\item \emph{The FPL-informed sampler did not help.} We built an information-directed adaptive
+      sampler (absolute-scale explore/exploit + steer toward the binding objective) and it does
+      \emph{not} beat a plain Gaussian at any budget---the entire win is in the objective. This
+      trims a section we hoped to write, but tightens the message: \emph{scalarization, not
+      search}.
+\item \emph{Perfect-model planning otherwise.} Apart from the mismatch study we plan on the true
+      model; the method matters least there, which is why the mismatch study must be the anchor.
+\end{itemize}
+
+\section{Positioning and venue}
+
+Framed on \emph{performance}, this is a borderline workshop paper (a nice tradeoff-curve
+result). Framed on \emph{un-tunable robustness under model mismatch}, with the honest boundary
+and the mechanism, it is a solid short conference / workshop paper in the learning-for-control
+space (e.g.\ L4DC, CoRL workshop, ICRA/IROS). The title should foreground robustness, e.g.\
+``\emph{Objective algebra, not weight tuning: fulfillment-priority costs give retuning-free
+robustness in sampling-based MPC.}'' The teacher/student distillation angle (one objective
+spec shared by an \fpl{} \mppi{} teacher and an RL student) is the natural full-paper extension
+but is out of scope for a first submission.
+
+\section{What would make it bullet-proof (a to-do for reviewers)}
+
+\begin{enumerate}[leftmargin=1.4em,itemsep=2pt]
+\item A third robot / a non-locomotion dynamic-competition task, to move from ``two robots'' to
+      ``a phenomenon.''
+\item The minimum-fulfillment bound stated as a proposition and checked numerically against the
+      observed per-objective floors, tying theory to the survival curves.
+\item A second mismatch axis that \emph{also} punishes aggression (e.g.\ a sudden external push /
+      disturbance rejection), to show the robustness is about ``aggression-punishing mismatch''
+      generally, not friction specifically.
+\item Seeds bumped to $\ge 30$ and confidence intervals on every point (currently 16--20).
+\end{enumerate}
+
+\paragraph{My recommendation.} Write it, lead with Fig.~\ref{fig:robust}, keep the nulls in
+the main text, and target a workshop with a clear path to the conference version once we add
+item (1) or (3) above. The robustness result is the real contribution; the rest is scaffolding
+that makes it believable.
+
+\end{document}

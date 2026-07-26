@@ -51,6 +51,7 @@ class MPPIv2(SamplingController):
         fpl_time_p: float | None = None,
         fpl_group_p: float | None = None,
         fpl_term_indices: "list[int] | None" = None,
+        fpl_weights: "list[float] | None" = None,
         use_hybrid: bool = False,
         floor_weight: float = 1.0,
         fpl_weighting: str = "softmax",
@@ -76,6 +77,7 @@ class MPPIv2(SamplingController):
             fpl_gamma=fpl_gamma,
             fpl_time_p=fpl_time_p,
             fpl_group_p=fpl_group_p,
+            fpl_weights=fpl_weights,
             use_hybrid=use_hybrid,
             floor_weight=floor_weight,
         )
