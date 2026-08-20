@@ -26,16 +26,17 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import sys
 import numpy as np
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 
 from analytic_mppi.eval import Config, run_study, init_hopper_stand, make_task
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _ci import mean_ci, wilson_ci            # noqa: E402
+from _figs import pareto_figure               # noqa: E402
 
 # --- knobs (offline: be generous with samples/episodes) --------------------
 STEPS = 150            # 3.0 s at dt=0.02
-N_EPISODES = 16        # fall rate resolves to 1/16 ≈ 0.06
+N_EPISODES = 30        # submission-grade: 30 seeds + 95% CIs on every point
 NUM_SAMPLES = 256
 NOISE = 0.3
 TEMP = 0.2
@@ -65,14 +66,18 @@ def build_configs():
 
 
 def episode_stats(res, task):
-    """Per-config aggregate: mean achieved vx, fall rate, forward distance, ESS."""
+    """Per-config aggregate with 95% CIs: mean per-episode speed (± CI), fall rate,
+    survival (Wilson CI)."""
     sd = res["sd"]
     vx = sd[..., task._vel_adr]
     zax = sd[..., task._zax_adr + 2]
-    px = sd[..., task._pos_adr]
-    fell = zax.min(axis=1) < FALL_UPRIGHT
-    return dict(vx=float(vx.mean()), fall=float(fell.mean()),
-                fwd=float((px[:, -1] - px[:, 0]).mean()), ess=float(np.nanmean(res["ess"])))
+    fell = zax.min(axis=1) < FALL_UPRIGHT          # (n_ep,)
+    vx_ep = vx.mean(axis=1)                          # (n_ep,) per-episode time-mean speed
+    n = int(fell.size)
+    vx_m, vx_h = mean_ci(vx_ep)
+    p, lo, hi = wilson_ci(int((~fell).sum()), n)
+    return dict(vx=vx_m, vx_ci=vx_h, fall=float(fell.mean()),
+                surv=p, surv_lo=lo, surv_hi=hi, ess=float(np.nanmean(res["ess"])))
 
 
 def main():
@@ -92,9 +97,9 @@ def main():
     print("=" * 78)
     for tv in TARGET_VELS:
         print(f"\n-- target_velocity = {tv} " + "-" * 40)
-        print(f"{'config':12s}{'vx':>8s}{'fall':>7s}{'fwd':>7s}{'ess':>7s}")
+        print(f"{'config':12s}{'vx±CI':>12s}{'fall':>7s}{'surv':>7s}")
         for label, s in per_tv[tv].items():
-            print(f"{label:12s}{s['vx']:8.3f}{s['fall']:7.2f}{s['fwd']:7.2f}{s['ess']:7.0f}")
+            print(f"{label:12s}{s['vx']:7.3f}±{s['vx_ci']:.2f}{s['fall']:7.2f}{s['surv']:7.2f}")
 
     # ---- raw-performance headline at the hardest speed ----
     tv = TARGET_VELS[-1]
@@ -119,61 +124,12 @@ def main():
     data_out.write_text(json.dumps({str(tv): per_tv[tv] for tv in TARGET_VELS}, indent=2))
     print(f"\nsaved raw stats -> {data_out}")
 
-    make_figure(per_tv, fpl_label)
-
-
-def make_figure(per_tv, fpl_label):
-    """Clean 1xN small-multiple: at EACH commanded speed, the FPL point sits above-and-right
-    of the whole linear-weight frontier (up-right = faster AND safer). One panel per
-    difficulty makes the 'no per-speed retuning' thesis visually explicit."""
-    tvs = list(per_tv.keys())
-    n = len(tvs)
-    LIN_C, FPL_C = "#4c72b0", "#dd8452"
-    fig, axes = plt.subplots(1, n, figsize=(4.2 * n, 4.3), sharey=True)
-    if n == 1:
-        axes = [axes]
-
-    for ax, tv in zip(axes, tvs):
-        lin = sorted([(s["vx"], 1.0 - s["fall"]) for l, s in per_tv[tv].items()
-                      if l.startswith("lin")])
-        xs, ys = zip(*lin)
-        ax.plot(xs, ys, "o-", color=LIN_C, lw=2, ms=8, mec="white", mew=1,
-                label="linear-weight family", zorder=3)
-        # label each linear point with its velocity weight (shows the frontier IS a retune knob)
-        for (l, s) in per_tv[tv].items():
-            if l.startswith("lin"):
-                ax.annotate(l.replace("lin wv=", "w="), (s["vx"], 1.0 - s["fall"]),
-                            fontsize=6.5, color=LIN_C, xytext=(0, -11),
-                            textcoords="offset points", ha="center")
-        fs = per_tv[tv][fpl_label]
-        fx, fy = fs["vx"], 1.0 - fs["fall"]
-        ax.plot(fx, fy, "*", color=FPL_C, ms=26, mec="k", mew=1.2,
-                label="FPL (one fixed spec)", zorder=5)
-
-        # headline arrow: fastest linear AT LEAST as safe as FPL -> FPL (gain at equal safety)
-        safe = [(s["vx"], 1.0 - s["fall"]) for l, s in per_tv[tv].items()
-                if l.startswith("lin") and s["fall"] <= fs["fall"] + 1e-9]
-        if safe:
-            bx, by = max(safe)
-            ax.annotate("", xy=(fx, fy), xytext=(bx, by),
-                        arrowprops=dict(arrowstyle="->", color="k", lw=1.6))
-            if fx > bx:
-                ax.text((fx + bx) / 2, min(fy, by) - 0.06,
-                        f"+{100*(fx-bx)/max(bx,1e-6):.0f}% speed\nat equal safety",
-                        fontsize=8, ha="center", va="top", fontweight="bold")
-        ax.set_title(f"commanded speed = {tv} m/s", fontsize=10)
-        ax.set_xlabel("achieved forward speed  (m/s)")
-        ax.grid(alpha=0.3)
-    axes[0].set_ylabel("survival rate  (1 − fall)")
-    axes[0].legend(fontsize=8, loc="lower left", framealpha=0.95)
-    fig.suptitle("Hopper: one fixed FPL spec dominates the entire linear-weight family at every "
-                 "speed — no retuning\n(identical sampler / atoms / budget / temporal "
-                 "weakest-link; only the objective composition differs)",
-                 fontsize=11, y=1.04)
-    out = Path(__file__).resolve().parent / "hopper_pareto.png"
-    fig.tight_layout()
-    fig.savefig(out, dpi=140, bbox_inches="tight")
-    print(f"saved Pareto figure -> {out}")
+    pareto_figure(
+        per_tv, fpl_label,
+        "Hopper: one fixed FPL spec dominates the linear-weight family at every speed — no "
+        "retuning\n(identical sampler / atoms / budget / temporal weakest-link; 30 seeds, "
+        "95% CIs; only the objective composition differs)",
+        Path(__file__).resolve().parent / "hopper_pareto.png")
 
 
 if __name__ == "__main__":

@@ -30,6 +30,9 @@ class CEM(SamplingController):
         use_fpl_discounted: bool = False,
         fpl_p: float = 0.1,
         fpl_gamma: float = 0.99,
+        fpl_time_p: float | None = None,
+        fpl_weights: "list[float] | None" = None,
+        fpl_term_indices: "list[int] | None" = None,
     ):
         if not 0.0 <= explore_fraction <= 1.0:
             raise ValueError(f"explore_fraction must be in [0,1], got {explore_fraction}")
@@ -39,6 +42,8 @@ class CEM(SamplingController):
             iterations=iterations, seed=seed,
             use_fpl_cost=use_fpl_cost, use_fpl_discounted=use_fpl_discounted,
             fpl_p=fpl_p, fpl_gamma=fpl_gamma,
+            fpl_time_p=fpl_time_p, fpl_weights=fpl_weights,
+            fpl_term_indices=fpl_term_indices,
         )
         self.num_elites = int(num_elites)
         self.sigma_start = float(sigma_start)

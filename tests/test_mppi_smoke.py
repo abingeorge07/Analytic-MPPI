@@ -449,3 +449,66 @@ def test_true_perturbation_splits_plan_and_step_models():
         plan_backend.step(u)
         true_backend.step(u)
     assert not np.allclose(plan_backend.get_state(), true_backend.get_state())
+
+
+# --------------------------- quadruped task + nominal_control warm-start ---------------------------
+
+def test_quadruped_atoms_and_nominal_control():
+    """Barkour quadruped task: fulfillment atoms in [0,1] and ~1 at the standing keyframe;
+    nominal_control equals the standing control (12 actuators)."""
+    import mujoco
+    task = make_task("quadruped")
+    b = MujocoBackend(task.model_path, nthread=2)
+    kf = b.model.keyframe("standing")
+    b.data.qpos[:] = kf.qpos; b.data.qvel[:] = 0.0
+    mujoco.mj_forward(b.model, b.data)
+    sd = np.asarray(b.data.sensordata)[None, :]
+    qpos = task.qpos_of(b.get_state())[None, :]
+    f = task.running_cost_terms_f(qpos, None, sd, kf.ctrl[None, :])
+    # atoms: [height, orientation, velocity, heading, posture, control]
+    assert f.shape[-1] == 6 and np.all(f >= 0.0) and np.all(f <= 1.0 + 1e-9)
+    # height, orientation, heading, posture near 1 standing (velocity ~0 standing is expected low)
+    assert f[0, 0] > 0.9 and f[0, 1] > 0.9 and f[0, 3] > 0.9 and f[0, 4] > 0.9
+    assert task.nominal_control.shape == (task.nu,)
+    assert np.allclose(task.nominal_control, kf.ctrl)
+
+
+def test_cube_reorientation_atoms_and_goal():
+    """LEAP-hand cube task: at the settled grasp the SAFETY atoms (hold, height) are ~1 and
+    the alignment atom is ~0 (error == the commanded angle); nominal_control == the cradle
+    control; and the goal is the commanded angle away from the rest orientation."""
+    from analytic_mppi.eval import init_cube
+    from analytic_mppi.tasks.cube import U_GRASP
+    ta = 1.2
+    task = make_task("cube", target_angle=ta)
+    b = MujocoBackend(task.model_path, nthread=2)
+    init_cube(b)
+    sd = np.asarray(b.data.sensordata)[None, :]
+    qpos = task.qpos_of(b.get_state())[None, :]
+    f = task.running_cost_terms_f(qpos, None, sd, U_GRASP[None, :])
+    # atoms: [hold, height, alignment, control]
+    assert f.shape[-1] == 4 and np.all(f >= 0.0) and np.all(f <= 1.0 + 1e-9)
+    assert f[0, 0] > 0.8 and f[0, 1] > 0.8, "cube cradled -> hold/height fulfillment ~1"
+    assert f[0, 2] < 0.05, "at the start the alignment fulfillment is ~0 (full error)"
+    # initial orientation error equals the commanded target angle (goal defined off q0).
+    assert abs(float(task._angle_err(sd)[0]) - ta) < 0.05
+    assert np.allclose(task.nominal_control, U_GRASP)
+
+
+def test_nominal_control_warm_starts_mean():
+    """A controller on a task exposing nominal_control initializes its plan mean to that
+    control (not zeros), so position actuators start by holding the pose. reset() preserves it.
+    A task WITHOUT the attribute (hopper) still initializes to zeros (backward compatible)."""
+    task = make_task("quadruped")
+    b = MujocoBackend(task.model_path, nthread=2)
+    ctrl = MPPIv2(task, b, num_samples=4, noise_level=0.3, temperature=0.2,
+                  plan_horizon=0.2, num_knots=3, spline_type="zero")
+    assert np.allclose(ctrl.mean, np.broadcast_to(task.nominal_control, ctrl.mean.shape))
+    ctrl.mean[:] = 123.0
+    ctrl.reset()
+    assert np.allclose(ctrl.mean, np.broadcast_to(task.nominal_control, ctrl.mean.shape))
+    # hopper has no nominal_control -> zeros
+    htask = make_task("hopper"); hb = MujocoBackend(htask.model_path, nthread=2)
+    hctrl = MPPIv2(htask, hb, num_samples=4, noise_level=0.3, temperature=0.2,
+                   plan_horizon=0.2, num_knots=3, spline_type="zero")
+    assert np.allclose(hctrl.mean, 0.0)

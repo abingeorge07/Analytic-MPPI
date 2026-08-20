@@ -173,6 +173,29 @@ def init_g1_stand(backend) -> None:
     mujoco.mj_forward(backend.model, backend.data)
 
 
+def init_cube(backend) -> None:
+    """LEAP-hand cube task: settle the free cube into the cradle grasp deterministically
+    (fingers driven to U_GRASP from just above the palm) so every episode starts from the
+    identical grasped pose. Mirrors the settle used to fix the task's rest orientation q0,
+    so the initial orientation error equals the commanded target_angle."""
+    from analytic_mppi.tasks.cube import settle_grasp_state
+    state, _q0 = settle_grasp_state(backend.model)
+    backend.set_state(state)
+
+
+def init_barkour_stand(backend, settle_steps: int = 80) -> None:
+    """Barkour quadruped: start from the 'standing' keyframe and settle briefly under the
+    standing control so the legs are loaded and stationary before the locomotion task begins.
+    (80 steps ≈ 0.16 s at the model's 0.002 dt.)"""
+    import mujoco
+    kf = backend.model.keyframe("standing")
+    backend.data.qpos[:] = kf.qpos
+    backend.data.qvel[:] = 0.0
+    mujoco.mj_forward(backend.model, backend.data)
+    for _ in range(int(settle_steps)):
+        backend.step(kf.ctrl)
+
+
 # ---------------------------------------------------------------------------
 #  Episodes / studies
 # ---------------------------------------------------------------------------

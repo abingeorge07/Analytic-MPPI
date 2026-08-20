@@ -29,15 +29,16 @@ from pathlib import Path
 import json
 
 import numpy as np
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 
 from analytic_mppi.eval import Config, run_study, init_hopper_stand, make_task
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _ci import mean_ci, wilson_ci  # noqa: E402
+from _figs import robustness_figure  # noqa: E402
 
 TV = 2.5
 STEPS = 150
-N_EPISODES = 20
+N_EPISODES = 30
 NUM_SAMPLES = 256
 TIME_P = -2.0
 FALL_UPRIGHT = 0.6
@@ -63,8 +64,11 @@ def stats(res, task):
     sd = res["sd"]
     vx = sd[..., task._vel_adr]
     zax = sd[..., task._zax_adr + 2]
-    surv = 1.0 - float((zax.min(axis=1) < FALL_UPRIGHT).mean())
-    return dict(vx=float(vx.mean()), surv=surv)
+    survived = zax.min(axis=1) >= FALL_UPRIGHT           # (n_ep,)
+    prod_ep = vx.mean(axis=1) * survived                  # productive speed per episode
+    prod_m, prod_h = mean_ci(prod_ep)
+    p, lo, hi = wilson_ci(int(survived.sum()), int(survived.size))
+    return dict(prod=prod_m, prod_ci=prod_h, surv=p, surv_lo=lo, surv_hi=hi)
 
 
 def main():
@@ -84,44 +88,16 @@ def main():
     print("=" * 74)
     print(f"{'friction':>9s}  " + "  ".join(f"{l:>12s}" for l in per_fr[FRICTIONS[0]]))
     for fr in FRICTIONS:
-        cells = "  ".join(f"{per_fr[fr][l]['vx']:.2f}/{per_fr[fr][l]['surv']:.2f}"
+        cells = "  ".join(f"{per_fr[fr][l]['prod']:.2f}/{per_fr[fr][l]['surv']:.2f}"
                           for l in per_fr[fr])
-        print(f"{fr:9.2f}  {cells}   (vx/surv)")
+        print(f"{fr:9.2f}  {cells}   (prod/surv)")
 
     Path(__file__).resolve().parent.joinpath("mismatch_robustness_data.json").write_text(
         json.dumps({str(fr): per_fr[fr] for fr in FRICTIONS}, indent=2))
-    make_figure(per_fr, fpl_label)
-
-
-def make_figure(per_fr, fpl_label):
-    frs = list(per_fr.keys())
-    x = [1.0 - fr for fr in frs]                       # traction LOSS (0 = nominal)
-    labels = list(per_fr[frs[0]].keys())
-    LINC, FPLC = "#8c9ec0", "#c44e52"
-    fig, (axS, axV) = plt.subplots(1, 2, figsize=(11.5, 4.4))
-    for l in labels:
-        is_fpl = (l == fpl_label)
-        surv = [per_fr[fr][l]["surv"] for fr in frs]
-        vx = [per_fr[fr][l]["vx"] for fr in frs]
-        style = dict(color=FPLC, lw=3, marker="*", ms=13, zorder=5, label="FPL (one fixed spec)") \
-            if is_fpl else dict(color=LINC, lw=1.4, marker="o", ms=5, alpha=0.85,
-                                label=f"linear {l.replace('lin ','')}")
-        axS.plot(x, surv, **style)
-        axV.plot(x, vx, **style)
-    for ax, ttl, yl in ((axS, "Survival vs traction loss", "survival rate (1 − fall)"),
-                        (axV, "Speed vs traction loss", "achieved speed (m/s)")):
-        ax.set_xlabel("traction loss  (1 − friction scale;  0 = nominal model)")
-        ax.set_ylabel(yl)
-        ax.set_title(ttl)
-        ax.grid(alpha=0.3)
-    axS.legend(fontsize=8, loc="lower left")
-    fig.suptitle("Hopper under traction loss (planner uses nominal model, reality is slippery — "
-                 "NO retuning):\none fixed FPL spec holds speed AND survival; no fixed linear "
-                 "weight does", y=1.05, fontsize=11)
-    fig.tight_layout()
-    out = Path(__file__).resolve().parent / "mismatch_robustness.png"
-    fig.savefig(out, dpi=140, bbox_inches="tight")
-    print(f"saved robustness figure -> {out}")
+    robustness_figure(
+        per_fr, fpl_label,
+        'Hopper under traction loss (planner uses nominal model, reality is slippery — NO retuning; 30 seeds, 95% CIs):\\none fixed FPL spec holds speed AND survival; no fixed linear weight does',
+        Path(__file__).resolve().parent / "mismatch_robustness.png")
 
 
 if __name__ == "__main__":

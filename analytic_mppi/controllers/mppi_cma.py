@@ -47,6 +47,9 @@ class MppiCma(SamplingController):
         fpl_p: float = 0.1,
         fpl_gamma: float = 0.99,
         fpl_group_p: float | None = None,
+        fpl_time_p: float | None = None,
+        fpl_weights: "list[float] | None" = None,
+        fpl_term_indices: "list[int] | None" = None,
     ):
         super().__init__(
             task=task, backend=backend, num_samples=num_samples,
@@ -55,6 +58,8 @@ class MppiCma(SamplingController):
             use_fpl_cost=use_fpl_cost, use_fpl_discounted=use_fpl_discounted,
             use_fpl_layered=use_fpl_layered,
             fpl_p=fpl_p, fpl_gamma=fpl_gamma, fpl_group_p=fpl_group_p,
+            fpl_time_p=fpl_time_p, fpl_weights=fpl_weights,
+            fpl_term_indices=fpl_term_indices,
         )
         self.initial_noise_level = float(initial_noise_level)
         self.minimum_noise_level = (

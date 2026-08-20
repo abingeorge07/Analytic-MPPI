@@ -4,22 +4,27 @@ from __future__ import annotations
 from typing import Dict, Type
 
 from .base import Task, power_mean
-from .pendulum import PendulumTask
+from .pendulum import PendulumTask, PendulumComTask
 from .walker import WalkerTask
 from .cube import CubeRotationTask
 from .g1_standup import G1StandupTask
 from .g1_walk import G1WalkTask, G1ReachTask
 from .hopper import HopperTask
+from .quadruped import QuadrupedTask, QuadrupedComTask, QuadrupedJumpTask
 
 
 TASKS: Dict[str, Type[Task]] = {
     "pendulum": PendulumTask,
+    "pendulum_com": PendulumComTask,
     "walker": WalkerTask,
     "cube": CubeRotationTask,
     "g1_standup": G1StandupTask,
     "g1_walk": G1WalkTask,
     "g1_reach": G1ReachTask,
     "hopper": HopperTask,
+    "quadruped": QuadrupedTask,
+    "quadruped_com": QuadrupedComTask,
+    "quadruped_jump": QuadrupedJumpTask,
 }
 
 
@@ -35,12 +40,16 @@ def make_task(name: str, **kwargs) -> Task:
 __all__ = [
     "Task",
     "PendulumTask",
+    "PendulumComTask",
     "WalkerTask",
     "CubeRotationTask",
     "G1StandupTask",
     "G1WalkTask",
     "G1ReachTask",
     "HopperTask",
+    "QuadrupedTask",
+    "QuadrupedComTask",
+    "QuadrupedJumpTask",
     "TASKS",
     "make_task",
     "power_mean",

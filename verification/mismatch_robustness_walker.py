@@ -23,15 +23,16 @@ from pathlib import Path
 import json
 
 import numpy as np
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 
 from analytic_mppi.eval import Config, run_study, make_task
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _ci import mean_ci, wilson_ci  # noqa: E402
+from _figs import robustness_figure  # noqa: E402
 
 TV = 5.0
 STEPS = 150
-N_EPISODES = 16
+N_EPISODES = 30
 NUM_SAMPLES = 256
 NOISE = 0.8
 TIME_P = -2.0
@@ -57,8 +58,11 @@ def stats(res, task):
     sd = res["sd"]
     vx = sd[..., task._vel_adr]
     zax = sd[..., task._zax_adr + 2]
-    surv = 1.0 - float((zax.min(axis=1) < FALL_UPRIGHT).mean())
-    return dict(vx=float(vx.mean()), surv=surv)
+    survived = zax.min(axis=1) >= FALL_UPRIGHT
+    prod_ep = vx.mean(axis=1) * survived
+    prod_m, prod_h = mean_ci(prod_ep)
+    p, lo, hi = wilson_ci(int(survived.sum()), int(survived.size))
+    return dict(prod=prod_m, prod_ci=prod_h, surv=p, surv_lo=lo, surv_hi=hi)
 
 
 def main():
@@ -77,48 +81,16 @@ def main():
     print(f"WALKER2d traction-loss robustness | K={NUM_SAMPLES} eps={N_EPISODES} | NO retuning")
     print("=" * 74)
     for fr in FRICTIONS:
-        cells = "  ".join(f"{per_fr[fr][l]['vx']:.2f}/{per_fr[fr][l]['surv']:.2f}"
+        cells = "  ".join(f"{per_fr[fr][l]['prod']:.2f}/{per_fr[fr][l]['surv']:.2f}"
                           for l in per_fr[fr])
-        print(f"friction={fr:4.2f}  {cells}   (vx/surv)")
+        print(f"friction={fr:4.2f}  {cells}   (prod/surv)")
 
     Path(__file__).resolve().parent.joinpath("mismatch_robustness_walker_data.json").write_text(
         json.dumps({str(fr): per_fr[fr] for fr in FRICTIONS}, indent=2))
-    make_figure(per_fr, fpl_label)
-
-
-def make_figure(per_fr, fpl_label):
-    frs = list(per_fr.keys())
-    x = [1.0 - fr for fr in frs]
-    labels = list(per_fr[frs[0]].keys())
-    lin_labels = [l for l in labels if l.startswith("lin")]
-    cmap = plt.cm.viridis(np.linspace(0.15, 0.85, len(lin_labels)))
-    fig, (axP, axS) = plt.subplots(1, 2, figsize=(11.5, 4.5))
-
-    def series(l, key):
-        return np.array([per_fr[fr][l][key] for fr in frs])
-
-    for i, l in enumerate(lin_labels):
-        prod = series(l, "vx") * series(l, "surv")
-        axP.plot(x, prod, "-o", color=cmap[i], lw=1.5, ms=5, label=l.replace("lin ", ""))
-        axS.plot(x, series(l, "surv"), "-o", color=cmap[i], lw=1.5, ms=5, label=l.replace("lin ", ""))
-    prod = series(fpl_label, "vx") * series(fpl_label, "surv")
-    axP.plot(x, prod, "-*", color="#c44e52", lw=3.2, ms=15, zorder=6, label="FPL (one fixed spec)")
-    axS.plot(x, series(fpl_label, "surv"), "-*", color="#c44e52", lw=3.2, ms=15, zorder=6,
-             label="FPL (one fixed spec)")
-    axP.set(title="Productive speed  (speed × survival)", ylabel="m/s × survival",
-            xlabel="traction loss  (1 − friction;  0 = nominal)")
-    axS.set(title="Survival", ylabel="survival rate (1 − fall)",
-            xlabel="traction loss  (1 − friction;  0 = nominal)")
-    for ax in (axP, axS):
-        ax.grid(alpha=0.3)
-    axP.legend(fontsize=8, title="cost", loc="lower left")
-    fig.suptitle("Walker2d (running), planner uses nominal model but reality gets slippery "
-                 "(NO retuning):\none fixed FPL spec delivers the most usable speed and holds "
-                 "survival ~1.0; the aggressive linear weight collapses", y=1.06, fontsize=11)
-    fig.tight_layout()
-    out = Path(__file__).resolve().parent / "mismatch_robustness_walker.png"
-    fig.savefig(out, dpi=140, bbox_inches="tight")
-    print(f"saved robustness figure -> {out}")
+    robustness_figure(
+        per_fr, fpl_label,
+        'Walker2d (running) under traction loss (NO retuning; 30 seeds, 95% CIs):\\none fixed FPL spec delivers the most usable speed and holds survival; the aggressive linear weight collapses',
+        Path(__file__).resolve().parent / "mismatch_robustness_walker.png")
 
 
 if __name__ == "__main__":

@@ -73,13 +73,21 @@ class HopperTask(Task):
     # ---- FPL cost ----
 
     def _height_fulfillment(self, sensordata: np.ndarray) -> np.ndarray:
-        # One-sided saturating band: full credit at/above `h_full`, decaying
-        # linearly to 0 at `h_floor`. `h_floor` is well ABOVE the collapsed-torso
-        # height (~0.2), so this decays BEFORE the fall cliff — the min-fulfillment
-        # floor bites while the torso is dropping toward a fall, not after it has
-        # already fallen (FPL_MPPI_HANDOFF §6/§8). No penalty for hopping higher.
+        # One-sided saturating band: full credit at/above `h_full`, decaying linearly
+        # to 0 at `h_floor`. THE key hopper atom. The band sits in a NARROW window just
+        # below the settled standing height (≈1.19): full credit at 1.15, cratering to 0
+        # by 0.85. This is deliberate — a hopper's only support is one leg, so the failure
+        # mode is not "tip over" (uprightness stays ≈1 while the torso sinks) but "fold the
+        # leg and let the torso COLLAPSE straight down" to chase forward speed. The old wide
+        # band (1.0→0.5) gave full credit for any h≥1.0, so staying tall cost nothing in the
+        # conjunction until the torso was already below 1.0 with the leg folded to its joint
+        # limit — too late to recover in one short rollout. Pulling `h_floor` up to 0.85
+        # makes ANY sag below standing crater the min-fulfillment conjunction, so the sampler
+        # keeps the leg loaded and springy and actually HOPS instead of collapse-dragging.
+        # (Empirically: min torso height over an episode 0.21→0.56, frac-time-tall 0.40→0.83.)
+        # No penalty for hopping higher — the torso bobs up during flight.
         h = self._torso_height(sensordata)
-        h_full, h_floor = 1.0, 0.5
+        h_full, h_floor = 1.15, 0.85
         return np.clip((h - h_floor) / (h_full - h_floor), 0.0, 1.0)
 
     def _orientation_fulfillment(self, sensordata: np.ndarray) -> np.ndarray:

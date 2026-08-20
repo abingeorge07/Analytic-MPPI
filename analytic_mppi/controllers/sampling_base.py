@@ -134,7 +134,16 @@ class SamplingController:
         self.t_eval, self.H = make_eval_times(self.plan_horizon, float(backend.dt))
 
         self.rng = np.random.default_rng(int(seed))
-        self.mean = np.zeros((self.num_knots, self.nu), dtype=np.float64)
+        # Warm-start the plan at the task's nominal control if it provides one. Position
+        # actuators (g1, quadruped) need this: the standing pose requires ctrl = u_ref, so a
+        # zeros-initialized mean would command a collapsed pose for the first steps and topple
+        # before MPPI recovers. Tasks with torque/relative actuators leave it None -> zeros.
+        nominal = getattr(task, "nominal_control", None)
+        self._mean_init = (np.zeros((self.num_knots, self.nu), dtype=np.float64)
+                           if nominal is None else
+                           np.broadcast_to(np.asarray(nominal, dtype=np.float64),
+                                           (self.num_knots, self.nu)).copy())
+        self.mean = self._mean_init.copy()
         self.last_trajectory: Optional[Trajectory] = None
         # Accumulated, not-yet-applied warm-start shift time (seconds). Only the
         # zero-order-hold path uses it — see _shift_mean.
@@ -143,7 +152,7 @@ class SamplingController:
     # ---- subclass extension points ----
 
     def reset(self):
-        self.mean[:] = 0.0
+        self.mean[:] = self._mean_init
         self._shift_accum = 0.0
 
     def sample_knots(self) -> np.ndarray:

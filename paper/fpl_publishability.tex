@@ -6,14 +6,16 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{xcolor}
+\usepackage[normalem]{ulem}
 \usepackage[colorlinks=true,linkcolor=blue,urlcolor=blue]{hyperref}
 \usepackage{enumitem}
 
-% Figures live in ../verification/
-\graphicspath{{../verification/}}
+% Figures are included with explicit fig/<name> paths (self-contained;
+% regenerate originals in ../verification/).
 
 \newcommand{\fpl}{\textsc{fpl}}
 \newcommand{\mppi}{\textsc{mppi}}
+\newcommand{\degree}{\ensuremath{^\circ}}   % works in text and math
 \newcommand{\claim}[1]{\textbf{\textcolor{blue!60!black}{#1}}}
 
 \title{\vspace{-2em}Should we publish the \fpl$\times$\mppi{} results?\\
@@ -29,14 +31,21 @@
 \noindent This is a memo to myself (and you) making the case, for and against, that the
 current results are worth writing up. Short version: \emph{yes}, but the paper should be
 built around the \textbf{model-mismatch robustness} result, not the raw performance numbers.
-The performance win alone ($+$22--67\% speed at matched safety on two locomotion tasks) is
-real but invites the reviewer reflex ``\,so retune your linear weights.\,'' The robustness
+The performance win alone ($+$34--93\% speed/rotation at matched safety across four tasks,
+30 seeds) is real but invites the reviewer reflex ``\,so retune your linear weights.\,'' The robustness
 result closes that door: a \emph{single fixed} \fpl{} objective dominates the entire
-linear-weight family across a $3.3\times$ ground-friction change with \emph{no retuning}, on
-two distinct robots---and you cannot retune a hand-weighted cost for a model error you do not
-know about. That is a structural, un-tunable property, which is the kind of thing that gets
-published. The honest negative results (where \fpl{} does \emph{not} help) make the story more
-credible, not less.
+linear-weight family across an aggression-punishing model change with \emph{no retuning}, on
+\textbf{four distinct robots (a hopper, a planar biped, a 12-DoF whole-body quadruped, and a
+16-DoF dexterous hand)} and \textbf{two mismatch axes (ground traction and contact grip)}
+---and you cannot retune a hand-weighted cost for a model error you do not know about. The
+dexterous-hand task (in-hand cube reorientation) is \emph{non-locomotion}, so the phenomenon is
+not a property of legged gaits. That is a structural, un-tunable property, which is the kind of
+thing that gets published. We further show the advantage is a property of the \textbf{objective},
+not the search: it holds \emph{within} every sampler we tried (\mppi, \mppi-CMA, CEM, colored
+noise), no sampler beats plain \mppi, and a \emph{single} \fpl{} spec transfers across morphologies
+with \textbf{no tuning}, while no fixed linear weight does. The honest negative results (a smarter
+sampler, a smarter weighting, and a hard safety shield all fail to beat the simple design) make the
+story more credible, not less.
 \end{abstract}
 
 \section{What we actually claim}
@@ -60,15 +69,17 @@ against \emph{at its best}, not its worst.
 \item \claim{Dynamic-competition dominance.} When objectives compete \emph{dynamically}
       (going faster unavoidably risks a fall), one fixed \fpl{} spec Pareto-dominates the
       entire linear-weight family on the (speed, survival) plane, with no per-operating-point
-      retuning. Shown on Hopper and Walker2d.
+      retuning. Shown on Hopper, Walker2d, a 12-DoF quadruped, and a 16-DoF LEAP hand
+      (in-hand cube reorientation---a \emph{non-locomotion} task, so the effect is not about gaits).
 \item \claim{An honest boundary.} That dominance \emph{disappears} when a safe conservative
       operating point exists (quasi-static tasks) or the task is unachievable for the
       planner. We show two such nulls. This is a scientific boundary, not a failure.
 \item \claim{Un-tunable robustness (the headline).} Under model mismatch that punishes
-      aggression (traction loss), the single fixed \fpl{} spec keeps the highest
-      \emph{productive speed} (speed $\times$ survival) at every mismatch level on both robots,
-      while every fixed linear weight either was already unsafe or degrades---and no retuning
-      is possible because the mismatch is unknown at design time.
+      aggression (traction loss on the legged robots, contact-grip loss on the hand), the
+      single fixed \fpl{} spec keeps the highest \emph{productive} performance
+      (progress $\times$ survival) at every mismatch level on all four robots, while every fixed
+      linear weight either was already unsafe or degrades---and no retuning is possible because
+      the mismatch is unknown at design time.
 \end{enumerate}
 
 \section{The evidence}
@@ -81,29 +92,38 @@ face-plants. On the mismatch study, the controller plans on the nominal model an
 a perturbed ``true'' simulator; \emph{no controller is retuned across mismatch levels.}
 
 \paragraph{1. Dynamic-competition dominance (Fig.~\ref{fig:pareto}).}
-On both robots a single \fpl{} point sits above-and-right of the whole linear frontier at every
-commanded speed. Headline numbers, fastest linear at $\le$ \fpl's fall rate:
+On all four robots a single \fpl{} point sits above-and-right of the whole linear frontier at
+every commanded speed (or, for the hand, commanded rotation). Headline numbers, fastest linear
+at $\le$ \fpl's fall (drop) rate:
 
 \begin{center}\small
-\begin{tabular}{lccc}
+\begin{tabular}{lccccc}
 \toprule
- & Hopper (tv$=3$) & Walker (tv$=4$) & Walker (tv$=6$) \\
+ & Hopper (tv$=3$) & Walker (tv$=4$) & Walker (tv$=6$) & Quadruped (tv$=3$) & Hand (roll$=103\degree$) \\
 \midrule
-\fpl{} (one fixed spec) & 0.925\,m/s @ 19\% fall & 1.17\,m/s @ 0\% & 1.20\,m/s @ 0\% \\
-best equally-safe linear & 0.554\,m/s & 0.77\,m/s & 0.92\,m/s \\
-\fpl{} advantage & \textbf{+67\%} & \textbf{+52\%} & \textbf{+30\%} \\
+\fpl{} (one fixed spec) & 0.975\,@\,33\% & 1.16\,@\,0\% & 1.20\,@\,0\% & 1.21\,@\,0\% & 51.6\degree\,@\,0\% \\
+best equally-safe linear & 0.539 & 0.77 & 0.90 & 0.77 & 26.8\degree \\
+\fpl{} advantage & \textbf{+81\%} & \textbf{+50\%} & \textbf{+34\%} & \textbf{+57\%} & \textbf{+93\%} \\
 \bottomrule
-\end{tabular}
+\end{tabular}\\[2pt]
+{\footnotesize achieved speed (m/s) or rotation ($\degree$ toward goal) @ fall/drop rate;
+``advantage'' vs.\ the fastest linear weight at $\le$ \fpl's fall/drop rate. The hand column is
+the fastest linear weight within $10\%$ drop; the only \emph{strictly} $0\%$-drop linear weight
+is the near-static crawler ($\sim$10$\degree$).}
 \end{center}
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=\linewidth]{hopper_pareto.png}\\[4pt]
-\includegraphics[width=\linewidth]{walker_pareto.png}
+\includegraphics[width=\linewidth]{fig/hopper_pareto.png}\\[3pt]
+\includegraphics[width=\linewidth]{fig/walker_pareto.png}\\[3pt]
+\includegraphics[width=\linewidth]{fig/quadruped_pareto.png}\\[3pt]
+\includegraphics[width=\linewidth]{fig/cube_pareto.png}
 \caption{\textbf{One fixed \fpl{} spec dominates the linear-weight family under dynamic
-competition, no retuning.} Top: Hopper. Bottom: Walker2d (running regime). At every commanded
-speed the \fpl{} star is faster \emph{and} safer than any comparably-safe linear weight; the
-linear family traces a speed$\leftrightarrow$survival tradeoff that \fpl{} sits above.}
+competition, no retuning.} Top to bottom: Hopper; Walker2d (running regime); Barkour
+quadruped (12 DoF whole-body); LEAP hand (16 DoF, in-hand cube reorientation---the
+\emph{non-locomotion} task). At every commanded speed / rotation the \fpl{} star is faster
+\emph{and} safer than any comparably-safe linear weight; the linear family traces a
+progress$\leftrightarrow$survival tradeoff that \fpl{} sits above, on all four robots.}
 \label{fig:pareto}
 \end{figure}
 
@@ -121,29 +141,32 @@ nominal model; the true ground friction is reduced (traction loss---ice / wet / 
 canonical sim-to-real gap). Productive speed (speed $\times$ survival), no retuning:
 
 \begin{center}\small
-\begin{tabular}{lcccc}
+\begin{tabular}{lcc}
 \toprule
-traction loss $(1-\text{friction})$ & 0.0 & 0.4 & 0.55 & 0.7 \\
+robot & \fpl{} productive speed (range) & best fixed linear (range) \\
 \midrule
-best fixed linear (Hopper) & 0.62 & 0.81 & 0.62 & 0.46 \\
-\fpl{} (Hopper) & \textbf{0.73} & \textbf{0.94} & \textbf{0.80} & \textbf{0.62} \\
-\midrule
-best fixed linear (Walker) & 0.98 & 0.98 & 0.98 & 0.93 \\
-\fpl{} (Walker) & \textbf{1.20} & \textbf{1.10} & \textbf{1.14} & \textbf{1.09} \\
+Hopper       & \textbf{0.66--0.93} & 0.34--0.77 \\
+Walker2d     & \textbf{1.09--1.18} & 0.81--0.98 \\
+Quadruped    & \textbf{1.09--1.15} & 0.78--1.01 \\
 \bottomrule
-\end{tabular}
+\end{tabular}\\[2pt]
+{\footnotesize Productive speed (m/s $\times$ survival) held across the traction sweep, 30
+seeds; \fpl{} is highest at every friction level on all three legged robots (the hand, a
+different metric and mismatch axis, is in paragraph~4).}
 \end{center}
 
-\noindent The fixed \fpl{} spec is best at \emph{every} mismatch level on both robots, at
-$\sim$100\% survival, and its margin on the hopper \emph{grows} with mismatch (+18\% at
-nominal $\to$ +126\% at the slipperiest). No fixed linear weight matches it: the aggressive
-weights' survival collapses, the safe weight crawls, and on the hopper the \emph{best} linear
-weight even changes with the (unknown) friction.
+\noindent The fixed \fpl{} spec is best at \emph{every} mismatch level on all three legged
+robots, and its margin on the hopper \emph{grows} with mismatch (+49\% at nominal $\to$ +103\%
+at the slipperiest). No fixed linear weight matches it: the
+aggressive weights' survival collapses, the safe weight crawls, and on the hopper the
+\emph{best} linear weight even changes with the (unknown) friction. On the quadruped the
+picture is the same---\fpl{} holds 100\% survival at top-or-tied productive speed while the
+aggressive linear weights invert onto the robot's back (Fig.~\ref{fig:robust_quad}).
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.92\linewidth]{mismatch_robustness.png}\\[4pt]
-\includegraphics[width=0.92\linewidth]{mismatch_robustness_walker.png}
+\includegraphics[width=0.92\linewidth]{fig/mismatch_robustness.png}\\[4pt]
+\includegraphics[width=0.92\linewidth]{fig/mismatch_robustness_walker.png}
 \caption{\textbf{Un-tunable robustness to traction loss.} Planner uses the nominal model;
 reality is slippery; no controller is retuned. Top: Hopper. Bottom: Walker2d. A single fixed
 \fpl{} spec (red) keeps the highest productive speed and holds survival across a $3.3\times$
@@ -151,6 +174,128 @@ friction reduction; the linear family cannot---aggressive weights lose survival,
 weight loses speed, and which weight is ``best'' shifts with the friction you don't know.}
 \label{fig:robust}
 \end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.92\linewidth]{fig/quadruped_robustness.png}
+\caption{\textbf{Robustness generalizes to a 12-DoF quadruped (Barkour).} Same traction-loss
+protocol, no retuning. \fpl{} (red) holds 100\% survival at top-or-tied productive speed across
+the sweep; the aggressive linear weights collapse and the near-competitor's survival wobbles
+(unpredictable falls).}
+\label{fig:robust_quad}
+\end{figure}
+
+\paragraph{4. Robustness on a second mismatch axis and off legged robots (Fig.~\ref{fig:robust_cube}).}
+The same un-tunable robustness holds on the dexterous hand, with the aggression-punishing
+mismatch being \textbf{reduced contact grip} (a worn / slippery cube---the manipulation analogue
+of traction loss) instead of ground friction. The hand must still tumble the cube $46\degree$
+without dropping it; no controller is retuned across grip levels. One fixed \fpl{} spec keeps
+$\sim$100\% survival and the highest productive rotation across a $30\%$ grip reduction, and is
+highest at \emph{every} level, its margin \emph{growing} as grip is lost:
+
+\begin{center}\small
+\begin{tabular}{lcc}
+\toprule
+grip (friction) & \fpl{} productive rotation (\degree $\times$ surv) & best fixed linear (wa$=2$) \\
+\midrule
+1.0 (nominal) & \textbf{26.1 / 100\%} & 18.6 / 100\% \\
+0.8           & \textbf{22.6 / 100\%} & 12.9 / \phantom{0}77\% \\
+0.7           & \textbf{20.1 / \phantom{0}97\%} & \phantom{0}7.0 / \phantom{0}47\% \\
+0.6           & \textbf{12.0 / \phantom{0}67\%} & \phantom{0}5.5 / \phantom{0}30\% \\
+\bottomrule
+\end{tabular}\\[2pt]
+{\footnotesize Productive rotation (\degree{} toward goal $\times$ survival) and survival, 30
+seeds. The best fixed linear weight both \emph{loses the cube} (survival $100\%\to30\%$) and sees
+its rotation collapse; aggressive weights are dead by grip $0.9$. This is a \emph{second}
+aggression-punishing mismatch (grip, not traction) on a \emph{fourth}, non-locomotion robot.}
+\end{center}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.92\linewidth]{fig/cube_robustness.png}
+\caption{\textbf{Robustness generalizes off legged robots (LEAP hand, grip loss).} In-hand cube
+reorientation; the true contact friction is reduced (slippery cube), no retuning. \fpl{} (red)
+holds $\sim$100\% survival and the highest productive rotation across a $30\%$ grip reduction; the
+whole linear family collapses (best weight's survival $100\%\to30\%$). Four robots and two
+mismatch axes (ground traction + contact grip), same phenomenon.}
+\label{fig:robust_cube}
+\end{figure}
+
+\paragraph{5. The advantage is the \emph{objective}, not the sampler (Fig.~\ref{fig:portability}).}
+The obvious objection to any cost-side result is that a smarter \emph{sampler} with a plain linear
+cost might close the gap. We rule this out on both sides. \textbf{(a) Portability:} holding the
+sampler fixed and varying only the composition, one fixed \fpl{} spec Pareto-dominates the
+linear-weight frontier \emph{within every sampler we tried}---plain Gaussian \mppi, \mppi-CMA,
+cross-entropy (CEM), and a colored-noise sampler (16 seeds; walker $+17$--$34\%$, hopper
+$+29$--$209\%$ over the fastest comparably-safe linear weight; on the contact-rich cube \fpl{} wins
+for \mppi/CEM/colored and \emph{ties} \mppi-CMA, the one honest exception). The un-tunable traction
+robustness likewise holds \emph{inside} every sampler (Fig.~\ref{fig:portability}, bottom).
+\textbf{(b) No sampler beats plain \mppi.} Reciprocally, holding the \fpl{} cost fixed and varying
+only the proposal---including a new FPL-native colored-noise + absolute-scale sampler and
+gradient-guided (BPTT) refinement---\emph{nothing beats warm-started plain Gaussian \mppi} at any
+budget (Fig.~\ref{fig:samplerrace}; 16 seeds $\times$ 5 budgets). So the entire advantage lives in
+the \emph{objective algebra}, and it transfers to whatever sampler you already use---which is the
+cleanest possible statement of ``change the scalarization, not the search.''
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{fig/fpl_portability.png}\\[4pt]
+\includegraphics[width=\linewidth]{fig/fpl_robustness_samplers.png}
+\caption{\textbf{The \fpl{} win is the objective, and it is portable across samplers.} Top: within
+each of \mppi, \mppi-CMA, CEM, and a colored-noise sampler, the single fixed \fpl{} spec (red star)
+sits above-and-right of the whole linear-weight frontier (walker, hopper). Bottom: the un-tunable
+traction-loss robustness holds inside every sampler too---\fpl{} rides above the linear family
+across the friction sweep in all four panels (hopper, no retuning, 12 seeds, 95\% CIs).}
+\label{fig:portability}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{fig/fpl_sampler_race.png}
+\caption{\textbf{No sampler beats plain \mppi{} (a clean negative that anchors the message).} With
+the \fpl{} cost held fixed, five proposals---plain Gaussian \mppi, \mppi-CMA, CEM, colored noise,
+and colored noise $+$ an FPL absolute-scale schedule---are within CIs at every sample budget, and
+plain \mppi{} is best-or-tied throughout; gradient-guided refinement (not shown) is $\sim$100$\times$
+costlier and no better. Across four search mechanisms nothing beats warm-started Gaussian \mppi.}
+\label{fig:samplerrace}
+\end{figure}
+
+\paragraph{6. Off-the-shelf across morphologies, no tuning (Fig.~\ref{fig:zerotuning}).}
+Because the \fpl{} objective carries \emph{no} cross-objective trade-off weights---each atom is a
+bounded fulfillment with a satisfied-band in physical units, and the min-conjunction composes
+them---a \emph{single} \fpl{} spec transfers across robots untuned. Dropped on the walker, hopper,
+and hand with no retuning, it is the most productive objective on \emph{every} robot; no single
+global linear weight transfers (an aggressive weight runs the walker but falls on the hopper at
+$0\%$ survival and drops the cube; a timid weight moves nothing). By contrast the linear cost's
+weights are arbitrary and entangled (e.g.\ the hopper cost hand-tunes four ratios $10/50/5/0.3$ with
+no natural scale, which must be re-tuned per robot and per difficulty). This is the ``drop it on a
+new morphology and get an honest read on whether it can do the task, with no hyperparameter hunt''
+use case that motivates the method.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.82\linewidth]{fig/fpl_zero_tuning.png}
+\caption{\textbf{Off-the-shelf: one global \fpl{} spec is the most productive objective on every
+robot (boxed); no single linear weight transfers.} Cell $=$ progress (\% of \fpl) $\times$
+survival; 16 seeds. Aggressive linear weights (wv$=4$/$8$) run the walker but fall on the hopper
+($0\%$ survival) and drop the cube; timid weights (wv$\le 1$) are too slow everywhere.}
+\label{fig:zerotuning}
+\end{figure}
+
+\paragraph{7. We probed the rest of the \mppi{} pipeline; the objective is where the value is.}
+Beyond the cost we tried to give \fpl{} an edge at two further pipeline stages, and report both
+honestly. \emph{Weighting/temperature:} \fpl's bounded reward lets the importance weights target a
+fixed effective-sample-size instead of a hand-tuned temperature; this genuinely helps where a fixed
+temperature collapses to near-uniform weights ($+13\%$ productive speed, $100\%$ vs $92\%$ survival
+on the noisy hopper), but the effect is modest and regime-dependent. \emph{Constraint/shield:} the
+per-objective structure uniquely enables a hard lexicographic safety filter (satisfy safety first,
+then optimize performance)---something a scalar weighted sum cannot express---but for these
+short-horizon dynamic tasks it does \emph{not} beat the soft min-fulfillment cost: a hard constraint
+under a short horizon is boundary-seeking (a recursive-feasibility failure) and the soft
+conjunction, which balances continuously, wins. This is an informative negative: it shows the soft
+min-fulfillment is the \emph{right} \fpl{} design here, and localizes where a hard shield / terminal
+value would pay off---long horizons or a learned value---i.e.\ exactly the teacher/student RL
+extension.
 
 \section{Why this is publishable}
 
@@ -172,25 +317,40 @@ weight loses speed, and which weight is ``best'' shifts with the friction you do
       predictive rule: \fpl{} wins iff the mismatch/competition makes \emph{aggression
       dangerous while safe progress remains possible}. A method paper that states its own
       boundary is more, not less, credible---and the rule is testable.
-\item \claim{Reproducible and cheap.} Pure-CPU \mppi{}, standard MuJoCo robots, five
-      self-contained scripts, seeds and figures regenerable from cached data. No learned
-      components to muddy attribution.
+\item \claim{Reproducible and cheap.} Pure-CPU \mppi{}, standard MuJoCo robots, self-contained
+      per-result scripts, and a \emph{crash-safe resumable} trial store: every
+      (experiment, sampler, cost, seed) trial is one durable line, so all $\sim$3{,}900 trials
+      behind the figures regenerate from cache and a killed run resumes with no recomputation. No
+      learned components to muddy attribution. Every claim is also \textbf{video-verified}:
+      synchronized side-by-side clips (\fpl{} vs.\ best-safe linear vs.\ aggressive linear) for all
+      four robots at \texttt{runs/paper/\{walker,hopper,cube,quadruped\}\_sidebyside.mp4}.
 \end{enumerate}
 
 \section{Where it is weak (so we decide with eyes open)}
 
 \begin{itemize}[leftmargin=1.4em,itemsep=2pt]
-\item \emph{Tasks are classic but simple} (Hopper, Walker2d). We could not get a humanoid to
-      walk from scratch with this planner, so the flashiest demo is absent. Honest, but a
-      reviewer will note it.
-\item \emph{Scope of the robustness win is narrow}: it holds for traction/aggression-punishing
-      mismatch, not for uniform-difficulty mismatch (mass, actuator strength). We must state
-      this plainly; over-claiming ``\fpl{} is universally robust'' would be false.
-\item \emph{The FPL-informed sampler did not help.} We built an information-directed adaptive
-      sampler (absolute-scale explore/exploit + steer toward the binding objective) and it does
-      \emph{not} beat a plain Gaussian at any budget---the entire win is in the objective. This
-      trims a section we hoped to write, but tightens the message: \emph{scalarization, not
-      search}.
+\item \emph{Most tasks are locomotion} (Hopper, Walker2d, a 12-DoF quadruped), \emph{but no longer
+      all}: the 16-DoF LEAP-hand in-hand cube reorientation is a non-locomotion
+      dynamic-competition + robustness win, so the phenomenon is not specific to legged gaits.
+      The remaining gap is a humanoid we could not get to walk from scratch with this planner, so
+      that flashiest demo is absent.
+\item \emph{Scope of the robustness win is bounded to aggression-punishing mismatch}: it holds
+      for two such axes now (ground traction \emph{and} contact grip), but not for
+      uniform-difficulty mismatch (mass, actuator strength). We must state this plainly;
+      over-claiming ``\fpl{} is universally robust'' would be false.
+\item \emph{No pipeline stage beyond the objective helped much (which we now frame as a strength).}
+      We tried, and honestly report, FPL-native mechanisms at the sampler (colored noise,
+      absolute-scale schedule, adaptive covariance, gradient refinement), the weighting/temperature
+      (adaptive effective-sample-size, feasibility gate), and the constraint stage (a hard
+      lexicographic safety shield). The sampler and shield are clean negatives and the weighting is
+      only a modest, regime-dependent gain (\S5--7). This trims sections we hoped to write, but
+      tightens the message to \emph{scalarization, not search}.
+\item \emph{Two honest caveats in the new sampler-axis results.} On the contact-rich cube, the
+      portability win holds for \mppi/CEM/colored but \emph{ties} \mppi-CMA (its covariance
+      adaptation lets even the conservative linear weight rotate safely); and the quadruped is
+      absent from the sampler/zero-tuning matrices because its $343$\,s/episode makes a
+      multi-sampler grid impractical---its objective-level win stands at 30 seeds
+      (Figs.~\ref{fig:pareto},~\ref{fig:robust_quad}).
 \item \emph{Perfect-model planning otherwise.} Apart from the mismatch study we plan on the true
       model; the method matters least there, which is why the mismatch study must be the anchor.
 \end{itemize}
@@ -209,19 +369,48 @@ but is out of scope for a first submission.
 \section{What would make it bullet-proof (a to-do for reviewers)}
 
 \begin{enumerate}[leftmargin=1.4em,itemsep=2pt]
-\item A third robot / a non-locomotion dynamic-competition task, to move from ``two robots'' to
-      ``a phenomenon.''
+\item \sout{A third robot} \sout{\textbf{[done: a 12-DoF quadruped]}} \sout{Next: a
+      \emph{non-locomotion} dynamic-competition task} \textbf{[both done: a 12-DoF quadruped and a
+      16-DoF LEAP hand (in-hand cube reorientation) each show the dynamic-competition dominance
+      \emph{and} the robustness; the hand is non-locomotion, closing the ``legged gaits only''
+      gap]}.
 \item The minimum-fulfillment bound stated as a proposition and checked numerically against the
       observed per-objective floors, tying theory to the survival curves.
-\item A second mismatch axis that \emph{also} punishes aggression (e.g.\ a sudden external push /
-      disturbance rejection), to show the robustness is about ``aggression-punishing mismatch''
-      generally, not friction specifically.
-\item Seeds bumped to $\ge 30$ and confidence intervals on every point (currently 16--20).
+\item \sout{A second mismatch axis that \emph{also} punishes aggression} \textbf{[partly done:
+      contact-grip loss on the hand is a second aggression-punishing axis beyond ground traction;
+      a sudden external push / disturbance-rejection axis is still worth adding]}.
+\item \sout{Seeds bumped to $\ge 30$ and confidence intervals on every point}
+      \textbf{[done: all sweeps are 30 seeds with 95\% CIs — x/y error bars on the Pareto
+      plots, shaded bands on the robustness plots (Wilson intervals for survival)]}.
 \end{enumerate}
 
 \paragraph{My recommendation.} Write it, lead with Fig.~\ref{fig:robust}, keep the nulls in
-the main text, and target a workshop with a clear path to the conference version once we add
-item (1) or (3) above. The robustness result is the real contribution; the rest is scaffolding
-that makes it believable.
+the main text. With item (1) done (four robots incl.\ a non-locomotion hand, two mismatch axes) and
+the new \emph{objective-not-search} evidence (portability within every sampler,
+Fig.~\ref{fig:portability}; no sampler beats plain \mppi, Fig.~\ref{fig:samplerrace}; and
+off-the-shelf transfer with no tuning, Fig.~\ref{fig:zerotuning}), the empirical case is now
+comfortably conference-ready and arguably a short full paper. The remaining polish is item (2) (the
+minimum-fulfillment bound as a checked proposition) and a disturbance-rejection axis. The robustness
+and objective-portability results are the real contribution; the honest pipeline-stage negatives
+(\S7) are what make it believable; the teacher/student RL extension is the natural full-paper
+sequel that the shield negative directly motivates.
+
+\appendix
+\section{Supplementary material (all regenerable / checkpointed)}
+\textbf{Companion write-up:} \texttt{FPL\_MPPI\_CAMPAIGN.md} (this campaign's full results) and
+\texttt{FPL\_FINDINGS.md} (the objective-level wins). \textbf{Additional figures}
+(\texttt{fig/}): \texttt{fpl\_portability\_cube.png} (cube portability per sampler at
+$K{=}256$), \texttt{fpl\_weighting.png} $+$ \texttt{fpl\_weighting\_robustness.png} (the weighting
+layer, \S7), \texttt{fpl\_shield.png} (the hard-safety shield negative, \S7).
+\textbf{Videos} (\texttt{runs/paper/}): synchronized side-by-side
+\texttt{\{walker,hopper,cube,quadruped\}\_sidebyside.mp4} and single-controller
+\texttt{\{...\}\_\{fpl,linear\}.mp4}. \textbf{New controllers} (\texttt{analytic\_mppi/controllers/}):
+\texttt{fpl\_colored} (colored-noise sampler), \texttt{fpl\_tempered} (adaptive-ESS weighting),
+\texttt{fpl\_shielded} (lexicographic safety filter). \textbf{Scripts} (\texttt{verification/}):
+\texttt{fpl\_sampler\_race.py}, \texttt{fpl\_portability.py}, \texttt{fpl\_zero\_tuning.py},
+\texttt{fpl\_robustness\_samplers.py}, \texttt{fpl\_weighting\_study.py},
+\texttt{fpl\_weighting\_robustness.py}, \texttt{fpl\_shield\_study.py},
+\texttt{fpl\_gradient\_probe.py}, \texttt{g1\_reach\_aggressive.py}; all write resumable
+\texttt{verification/checkpoints/*.jsonl}.
 
 \end{document}

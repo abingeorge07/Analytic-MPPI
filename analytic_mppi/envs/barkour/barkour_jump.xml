@@ -1,0 +1,13 @@
+<mujoco model="barkour_jump">
+  <!-- Base Barkour robot + flat floor, plus a hurdle the robot must clear. Kept as a thin
+       separate scene (include) so the base locomotion model/task is untouched. The obstacle
+       is a box wall spanning the y-width; only the toe contact spheres (contype=1) collide
+       with the world, so conaffinity=1 makes the feet strike the wall -> the robot must lift
+       its feet up-and-over it (a hurdle jump). x=0.55 m ahead of the start, 0.12 m tall. -->
+  <include file="barkour.xml"/>
+  <worldbody>
+    <geom name="obstacle" type="box" pos="0.55 0 0.06" size="0.02 0.6 0.06"
+          contype="1" conaffinity="1" rgba="0.85 0.2 0.2 1"
+          solref="0.006 1" solimp="0.98 0.999 0.001"/>
+  </worldbody>
+</mujoco>
