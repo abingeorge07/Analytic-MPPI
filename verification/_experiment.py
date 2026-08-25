@@ -66,6 +66,11 @@ def sampler_kwargs(sampler: str, env: str, K: int) -> Dict[str, Any]:
             kw.update(color_beta=2.0, use_absolute_scale=False)
         # fpl_tempered: the weight_mode + its knobs come from the caller via run_trial(extra=...)
         return kw
+    if sampler == "predictive_sampling":
+        # Greedy argmax over the same Gaussian cloud (the mean is always sample 0), so
+        # there is no temperature to match — this is the selection-rule ablation against
+        # `mppi`: identical proposal, softmax replaced by argmax.
+        return dict(noise_level=noise, fpl_time_p=time_p)
     if sampler == "mppi_cma":
         return dict(initial_noise_level=noise, temperature=temp,
                     covariance_adaptation_rate=0.1, fpl_time_p=time_p)

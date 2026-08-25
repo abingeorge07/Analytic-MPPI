@@ -18,23 +18,14 @@ class PredictiveSampling(SamplingController):
         *,
         num_samples: int,
         noise_level: float,
-        num_knots: int = 4,
-        plan_horizon: float = 1.0,
-        spline_type: str = "zero",
-        iterations: int = 1,
-        seed: int = 0,
-        use_fpl_cost: bool = False,
-        use_fpl_discounted: bool = False,
-        fpl_p: float = 0.1,
-        fpl_gamma: float = 0.99,
+        **kwargs,
     ):
-        super().__init__(
-            task=task, backend=backend, num_samples=num_samples,
-            num_knots=num_knots, plan_horizon=plan_horizon, spline_type=spline_type,
-            iterations=iterations, seed=seed,
-            use_fpl_cost=use_fpl_cost, use_fpl_discounted=use_fpl_discounted,
-            fpl_p=fpl_p, fpl_gamma=fpl_gamma,
-        )
+        # Forward the whole spline / FPL keyword surface to SamplingController rather than
+        # re-declaring a subset here: hand-enumerating it is what made this controller
+        # unusable with the linear arm (`fpl_weights`) and the temporal weakest-link
+        # (`fpl_time_p`). Same passthrough pattern as FplColoredMPPI / FplTemperedMPPI.
+        # There is deliberately no `temperature`: selection is argmax by construction.
+        super().__init__(task=task, backend=backend, num_samples=num_samples, **kwargs)
         self.noise_level = float(noise_level)
 
     def sample_knots(self) -> np.ndarray:
@@ -53,4 +44,8 @@ class PredictiveSampling(SamplingController):
             best = int(traj.reward.argmax())
         else:
             best = int(np.argmin(traj.scores))
+        # Greedy selection puts all weight on one rollout, so ESS is 1 by construction.
+        # Recorded explicitly so this sampler appears in the ESS diagnostics alongside
+        # the softmax controllers instead of logging NaN.
+        self.last_ess = 1.0
         return traj.knots[best].copy()

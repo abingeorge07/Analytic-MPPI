@@ -1,0 +1,2808 @@
+[
+ {
+  "cluster": "C1",
+  "ref": "arxiv:2209.12842",
+  "claims": [
+   {
+    "claim": "RA-MPPI estimates CVaR by brute-force Monte Carlo: for each of M=1024 nominal trajectories it simulates N=300 additional disturbed rollouts, i.e. 3.072e5 trajectories per control step, requiring an RTX 3090 to hold 44.3 Hz. Explicit risk reshaping of the rollout cost distribution is therefore compute-prohibitive in a CPU, K<=256 regime.",
+    "grade": "E4",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "3.072e5 rollouts/step at 44.3 Hz on RTX 3090 (M=1024, N=300)",
+    "setting": "Custom track sim + 1/28-scale race car with Optitrack",
+    "where": "Sec. IV Eq. 12, Sec. V"
+   },
+   {
+    "claim": "Reshaping the tail of the rollout cost distribution before the MPPI softmax (via CVaR of disturbed rollouts) cuts collisions dramatically at essentially unchanged task performance: 80% fewer collisions in sim, 55.7% fewer on hardware (9.0 vs 20.3 collisions/lap) with ~same lap time (7.38 s vs 7.11 s). This is the mechanistic sibling of FPL's bounded atoms compressing cost tails, achieved instead by explicit uncertainty sampling.",
+    "grade": "E4",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "sim: 80% fewer collisions; hardware: 9.0 vs 20.3 collisions/lap, lap time 7.38 s vs 7.11 s",
+    "setting": "Aggressive driving in cluttered track, sim + 1/28-scale car",
+    "where": "Fig. 3 (Sec. V-B), Table I (Sec. V-C)"
+   }
+  ],
+  "cpu_feasible": false,
+  "morphologies": [
+   "1/28-scale race car (sim + hardware)"
+  ],
+  "objective_representation": "risk (CVaR over Monte Carlo disturbed rollouts)",
+  "not_read": null
+ },
+ {
+  "cluster": "C1",
+  "ref": "arxiv:2102.09027",
+  "claims": [
+   {
+    "claim": "RMPPI's free-energy growth bound (Lemma 3) decomposes robustness into three terms: distance from a task-constraint threshold, Monte Carlo sampling error, and a tracking-error term scaled by the Lipschitz constants of the terminal and running costs (L_phi, L_q). Bounded, saturating cost atoms (as in FPL) directly shrink these Lipschitz factors, giving a formal pathway by which cost-representation choice alone tightens the robustness bound.",
+    "grade": "E3",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "Theory (RA-L peer-reviewed)",
+    "where": "Sec. IV, Lemma 3"
+   },
+   {
+    "claim": "RMPPI (augmented importance sampling propagating nominal + real systems with a feedback tracker inside the sampled rollouts) outperforms both MPPI and Tube-MPPI, operating nearer dynamic limits: sim lap 29.05+-0.96 s at up to 8.84 m/s vs 30.16-30.48 s / ~5.7 m/s for baselines; AutoRally hardware sustains 0.84 rad max slip vs 0.63 (MPPI) at comparable lap times. The cost is an architectural one: a tracking controller (iLQG or CCM) and GPU-scale sampling; the CCM variant was not real-time on CPU.",
+    "grade": "E2",
+    "bears_HA": "neutral",
+    "bears_HB": "neutral",
+    "quantitative": "sim: 29.05+-0.96 s vs 30.16-30.48 s laps; hardware: 31.07+-0.33 s, max slip 0.84 vs 0.63 rad",
+    "setting": "AutoRally 1/5-scale off-road vehicle, sim + hardware, 15 laps each",
+    "where": "Table I, Sec. V"
+   },
+   {
+    "claim": "Tube-MPPI's open-loop nominal-state propagation makes it entirely reliant on the tracking controller; when tracking fails the nominal and actual states diverge and the whole scheme fails, which is why RMPPI re-couples them. Architectural robustness mechanisms carry their own fragility.",
+    "grade": "E2",
+    "bears_HA": "neutral",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "AutoRally sim analysis",
+    "where": "Sec. V-1"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "AutoRally 1/5-scale car (sim + hardware)"
+  ],
+  "objective_representation": "linear (quadratic + threshold costs; robustness via architecture, not cost shaping)",
+  "not_read": null
+ },
+ {
+  "cluster": "C1",
+  "ref": "arxiv:1707.02342",
+  "claims": [
+   {
+    "claim": "The information-theoretic MPPI derivation (free-energy lower bound + KL matching to the optimal Gibbs distribution) places no smoothness or boundedness requirement on the cost: the softmax-weighted update w(V) ~ exp(-S(V)/lambda) accepts arbitrary, even discontinuous, cost functions, and temperature lambda alone controls the peakedness/exploration trade-off. This is the exact pathway FPL's S=-log(u) feeds into, and it is cost-agnostic by construction.",
+    "grade": "E1",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "Theory (T-RO, canonical, replicated by essentially every MPPI follow-up)",
+    "where": "Secs. III-IV, Eq. 22"
+   },
+   {
+    "claim": "Across 1,700+ laps (~100 km) on the AutoRally platform at 6/8.5/11 m/s targets, IT-MPC completed 100-lap runs in 17 of 24 scenarios and generally beat CEM-MPC, especially at aggressive speeds, using ~1200 samples of 2.5 s horizons at 40 Hz on an onboard GTX-750ti (~4.8M dynamics queries/s). The canonical baseline regime is GPU-scale sampling, roughly 5x the program's K budget.",
+    "grade": "E2",
+    "bears_HA": "neutral",
+    "bears_HB": "neutral",
+    "quantitative": "17/24 scenarios completed 100 laps; 1200 samples at 40 Hz",
+    "setting": "AutoRally 1/5-scale vehicle, dirt track, two dynamics models",
+    "where": "Sec. VII"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "AutoRally 1/5-scale car (hardware)"
+  ],
+  "objective_representation": "linear (quadratic state cost + control cost)",
+  "not_read": null
+ },
+ {
+  "cluster": "C1",
+  "ref": "arxiv:2601.01409",
+  "claims": [
+   {
+    "claim": "On a Unitree-class quadruped in simulation, sampling parameterization alone flips task success: cubic-spline sampling with 4 knots achieves 100% success on flat walking, stair climbing, and box traversal, while per-timestep independent Gaussian sampling (the repo's warm-started fixed-Gaussian regime) gets 60% on flat ground and 0% on stairs; Bezier-cp4 also fails stairs at 0%. On contact-rich legged tasks the sampling structure, not the cost, can be the binding constraint.",
+    "grade": "E4",
+    "bears_HA": "contradicts",
+    "bears_HB": "neutral",
+    "quantitative": "CubicSpline-k4: 100/100/100% vs Normal: 60% flat, 0% stairs; Normal 1358 vs 444 steps to goal on flat",
+    "setting": "Unitree-class quadruped, simulation, 'thousands' of rollouts",
+    "where": "Tables I-III"
+   },
+   {
+    "claim": "Structured (spline) sampling simultaneously improves sample efficiency, control smoothness, and robustness, with moderate dimensionality (k=4) beating both unstructured noise and higher-dimensional parameterizations (k=8: 80% on box traversal) \u2014 a low-cost, untried alternative to the six sampling mechanisms that failed in-repo.",
+    "grade": "E4",
+    "bears_HA": "neutral",
+    "bears_HB": "neutral",
+    "quantitative": "CubicSpline-k8 80% vs k4 100% on box traversal",
+    "setting": "Unitree-class quadruped simulation",
+    "where": "Tables I-III, Sec. V conclusions"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "Unitree-class quadruped (sim)"
+  ],
+  "objective_representation": "linear",
+  "not_read": null
+ },
+ {
+  "cluster": "C1",
+  "ref": "arxiv:2401.09241",
+  "claims": [
+   {
+    "claim": "Reformulating the MPPI cost as S~(V)=S(V)+lambda*log(p(V)/q_s(V)) lets arbitrary proposal mixtures (samples from ancillary controllers plus Gaussian samples) enter the estimator with importance weights that depend only on the task cost \u2014 a clean, unbiased mechanism for injecting external policy proposals (including a learned student/teacher policy) into MPPI's sample set at negligible cost.",
+    "grade": "E2",
+    "bears_HA": "neutral",
+    "bears_HB": "supports",
+    "quantitative": null,
+    "setting": "Theory + experiments (RA-L)",
+    "where": "Sec. III"
+   },
+   {
+    "claim": "With informed proposals, tiny sample budgets suffice: at K=50 Biased-MPPI had 0 collisions in two-vessel crossing where standard MPPI had 4 at K=50 and still 7 at K=2000; four-agent canal navigation 40/50 successes with 0 collisions at K=50 vs 34/50 with 16 collisions; real Jackal at K=300 had 0 collisions vs 6 for standard MPPI. Proposal quality beats raw sample count, well inside the program's K<=256 CPU regime.",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "supports",
+    "quantitative": "K=50: 0 vs 4 collisions (and vs 7 at K=2000); Jackal K=300: 0 vs 6 collisions",
+    "setting": "Quanser pendulum sim, autonomous vessels sim, Clearpath Jackal hardware",
+    "where": "Tables I-II, Sec. V"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "pendulum (Quanser sim)",
+   "autonomous surface vessels (sim)",
+   "Clearpath Jackal ground robot (hardware)"
+  ],
+  "objective_representation": "linear",
+  "not_read": null
+ },
+ {
+  "cluster": "C1",
+  "ref": "Robust Sampling Based Model Predictive Control with Sparse Objective Information (Williams et al., RSS 2018)",
+  "claims": [
+   {
+    "claim": "Sparse weighted-indicator costs are easy to specify, interpretable, and act like soft-hard constraints, but make warm-started MPPI brittle under disturbances: when a disturbance pushes the warm-start into a region where indicator terms give zero gradient signal, the sampling distribution cannot recover and the optimizer gets stuck or diverges. Pure indicator (zero-slope) cost representations therefore need an external robustness mechanism \u2014 precisely the failure mode FPL's clipped ramps (bounded but sloped inside the band) are shaped to avoid.",
+    "grade": "E2",
+    "bears_HA": "contradicts",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "2-D double integrator illustrative example + analysis",
+    "where": "Secs. I-II, V-A, Fig. 1-2"
+   },
+   {
+    "claim": "An interpretable sparse-indicator spec plus a robustness mechanism (tube with iLQG ancillary tracker and nominal-state accept/reject) approaches or exceeds an extensively hand-tuned dense cost: racing sim Tube-MPPI reached a 9 m/s max target with 9.39+-0.76 s laps vs Tuned-MPPI's 8 m/s / 8.33+-1.05 s, while naive MPPI under the same disturbances collapsed to 5 m/s / 11.87 s. Same shape of claim as FPL's Pareto-dominance over tuned linear weights, achieved architecturally rather than by cost shaping.",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "Tube: 9.39+-0.76 s @ 9 m/s target; Tuned: 8.33+-1.05 s @ 8 m/s; Disturbance-MPPI: 11.87+-0.47 s @ 5 m/s",
+    "setting": "Gazebo 1/5-scale racing sim with learned hybrid physics-NN model (model error as disturbance source)",
+    "where": "Table II, Sec. V-C"
+   },
+   {
+    "claim": "On hardware (AutoRally, 12 laps at 9 m/s target, ~2 km) Tube-MPPI held mean nominal-actual state divergence to 14 cm (max 47 cm); in 100-trial helicopter landing, Tube-MPPI eliminated the catastrophic outliers Disturbance-MPPI produced (Tube distance 0.69+-0.15 vs MPPI-large-noise 0.77+-0.25 with tail misses). Compute: 1200 2-s samples at 50 Hz on GPU, iLQG ancillary on a separate CPU thread at 100 Hz.",
+    "grade": "E2",
+    "bears_HA": "neutral",
+    "bears_HB": "neutral",
+    "quantitative": "mean divergence 14 cm, max 47 cm; landing distance 0.69+-0.15 vs 0.77+-0.25 with outliers removed",
+    "setting": "AutoRally hardware + simulated helicopter landing (100 random trials)",
+    "where": "Tables I, III; Secs. V-B, V-D"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "2-D point mass (sim)",
+   "helicopter landing (sim)",
+   "1/5-scale race car (Gazebo sim + AutoRally hardware)"
+  ],
+  "objective_representation": "other (weighted sparse indicator functions, quasi-logical soft constraints)",
+  "not_read": null
+ },
+ {
+  "cluster": "C1",
+  "ref": "arxiv:2607.06950",
+  "claims": [
+   {
+    "claim": "RC-MPPI adapts conservatism online from a filtered prediction-execution residual via three coupled mechanisms (constraint tightening, barrier-weight scaling, temperature relaxation), lifting success under severe unmodeled mismatch from 0.64 to 0.94 (point mass with 0.9 s actuator lag) and 0.56 to 0.96 (2R manipulator with inertial error, servo lag, saturation), at claimed zero overhead over standard MPPI. A cheap online-adaptation alternative to a fixed robust spec \u2014 but it modifies the controller, not the cost representation, and needs a residual signal.",
+    "grade": "E4",
+    "bears_HA": "neutral",
+    "bears_HB": "neutral",
+    "quantitative": "success 0.64->0.94 and 0.56->0.96; violation steps 4.16->0.62 and 3.08->0.10 (n=50)",
+    "setting": "LTI point mass (K=2048, T=40) and planar 2R manipulator (K=1024, T=35), simulation only",
+    "where": "Tables I-II, Sec. V"
+   },
+   {
+    "claim": "Theory: model-mismatch-induced distortion of MPPI's softmax weights scales as 2*C_Delta*s_bar/beta, where C_Delta is the cost's sensitivity to state error \u2014 so raising temperature or capping cost sensitivity provably limits ranking distortion under mismatch. Bounded clipped-ramp atoms cap C_Delta by construction, offering a mechanistic account of why FPL specs degrade gracefully under model error.",
+    "grade": "E4",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "Analytic (Proposition 2 and weight-perturbation analysis)",
+    "where": "Sec. IV, Prop. 2"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "LTI point mass (sim)",
+   "planar 2R manipulator (sim)"
+  ],
+  "objective_representation": "constrained (barrier penalties with residual-adaptive tightening)",
+  "not_read": null
+ },
+ {
+  "cluster": "C1",
+  "ref": "arxiv:2502.20476",
+  "claims": [
+   {
+    "claim": "MPPI, policy-gradient RL, and diffusion-model sampling are unified as gradient ascent on a (Gaussian-smoothed) Gibbs energy: policy gradient reduces to MPPI under an exponential transformation of rewards, and diffusion reverse sampling follows the same update rule. Purely theoretical, no experiments \u2014 but it grounds the H-B design in which an MPPI teacher and an RL student sharing one (FPL) objective are ascending the same smoothed landscape, so distillation should not fight the student's own reward gradient.",
+    "grade": "E4",
+    "bears_HA": "neutral",
+    "bears_HB": "supports",
+    "quantitative": null,
+    "setting": "Theory only (no experimental validation)",
+    "where": "Secs. 3-4, Algorithm 1"
+   }
+  ],
+  "cpu_feasible": null,
+  "morphologies": [],
+  "objective_representation": "other (unified energy/Gibbs-measure view)",
+  "not_read": null
+ },
+ {
+  "cluster": "C1",
+  "ref": "arxiv:2511.08019",
+  "claims": [
+   {
+    "claim": "The PI-MPC-as-inference survey (MPPI, CEM, GMM/Stein variational, Tsallis-divergence generalizations) treats the cost purely as an arbitrary J inside exp(-J/lambda); it contains no prior work on bounded/normalized fulfillment composition, exponentiated-utility bounds, or formal risk-measure cost transforms in the Boltzmann weighting \u2014 the FPL cost-representation slot appears genuinely unoccupied in this family.",
+    "grade": "E4",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "Survey/tutorial of the sampling-based MPC family",
+    "where": "taxonomy sections; cost-design discussion"
+   },
+   {
+    "claim": "Robustness to model mismatch is not treated as a design axis anywhere in the surveyed PI-MPC framework; open problems are a-priori sample complexity, exponential sample growth with action dimension, and the absence of formal stability guarantees. The mismatch-robustness question the in-repo benchmark answers is an acknowledged blind spot of the field's own self-description.",
+    "grade": "E4",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "Survey",
+    "where": "open-problems discussion"
+   }
+  ],
+  "cpu_feasible": null,
+  "morphologies": [],
+  "objective_representation": null,
+  "not_read": null
+ },
+ {
+  "cluster": "C1",
+  "ref": "arxiv:2203.16599",
+  "claims": [
+   {
+    "claim": "Sampling control perturbations from a normal-log-normal mixture yields wider state-space coverage with >30% less injected variance than vanilla Gaussian MPPI, converting into robustness gains without touching cost or architecture: 96% vs 84% success in 1.5 m-spaced clutter, 1 vs 7 collisions in dense forest, shorter and lower-variance paths (72.64+-0.80 m vs 76.12+-3.31 m).",
+    "grade": "E2",
+    "bears_HA": "neutral",
+    "bears_HB": "neutral",
+    "quantitative": "96% vs 84% success; 1 vs 7 collisions; >30% variance reduction",
+    "setting": "Cartpole sim + Clearpath Jackal with VLP-16 LiDAR, cluttered forests and indoor, K=2500 on GTX 1660 Ti at 50 Hz",
+    "where": "Sec. V tables, Sec. IV"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "cartpole (sim)",
+   "Clearpath Jackal AGV (hardware)"
+  ],
+  "objective_representation": "linear",
+  "not_read": null
+ },
+ {
+  "cluster": "C1",
+  "ref": "arxiv:2503.11717",
+  "claims": [
+   {
+    "claim": "Low-pass Butterworth filtering of the sampled perturbations (uniform-energy passband, unlike 1/f colored noise which biases toward the lowest frequencies) improves MPPI across morphologies on a SINGLE CPU CORE at N=100-256 in MuJoCo: +24% average over MPPI variants on Hopper/Ant/HalfCheetah (10% over the best baseline, ColoredMPPI), +24% (Unitree Go2) and +41% (MAB Silver Badger) over Dial-MPC for quadruped trot with ColoredMPPI ~2x worse, and wins on real F1TENTH at N=10 and N=50, with +2.4% overhead. Directly demonstrates that CPU-budget, K<=256, morphology-spanning MPPI is real-time viable and still improvable via noise shaping.",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "+24% Gym avg, +24%/+41% quadrupeds, F1TENTH best at N=10/50; Intel i5-12500H single core, N=100-256, H=15-16",
+    "setting": "MuJoCo Gymnasium (Hopper/Ant/HalfCheetah), Unitree Go2 + MAB Silver Badger sim, real F1TENTH oval",
+    "where": "Secs. V-VI results tables"
+   },
+   {
+    "claim": "Spectra of RL-trained expert policies concentrate around ~2 Hz and match low-pass-filtered noise better than 1/f colored noise \u2014 the specific frequency shaping matters, and the colored-noise/iCEM family (which failed in-repo) is the wrong shaping, consistent with the repo's negative result.",
+    "grade": "E2",
+    "bears_HA": "neutral",
+    "bears_HB": "neutral",
+    "quantitative": "ColoredMPPI ~2x worse than LP variant on quadrupeds",
+    "setting": "Spectral analysis of RL policies vs noise processes",
+    "where": "Sec. IV analysis"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "Hopper/Ant/HalfCheetah (MuJoCo)",
+   "Unitree Go2 (sim)",
+   "MAB Silver Badger (sim)",
+   "F1TENTH race car (hardware)"
+  ],
+  "objective_representation": "linear",
+  "not_read": null
+ },
+ {
+  "cluster": "C1",
+  "ref": "arxiv:1509.01149",
+  "claims": [
+   {
+    "claim": "The generalized importance-sampling derivation (likelihood ratio between diffusion processes with different drift AND covariance) legitimizes sampling from distributions other than the passive dynamics \u2014 the theoretical license behind every biased/adaptive-covariance/structured-noise MPPI variant, including the six that failed in-repo. The theory permits covariance change; it does not predict when it helps.",
+    "grade": "E3",
+    "bears_HA": "neutral",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "Theory (Feynman-Kac / path-integral derivation), 2015 preprint whose machinery was absorbed into peer-reviewed successors",
+    "where": "Secs. II-III"
+   },
+   {
+    "claim": "Natural system noise is insufficient for exploration: race-car and quadrotor tasks required exploration-variance multipliers of 50-300x over natural noise, with 10-1000 rollouts at 50 Hz, and explicit (non-smoothed) crash/obstacle costs outperformed smooth approximations \u2014 early evidence that MPPI tolerates hard cost structure that gradient methods cannot, provided injected variance is large.",
+    "grade": "E3",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "variance multipliers 50-300x; 10-1000 rollouts at 50 Hz; MPPI < DDP average cost",
+    "setting": "Race car and quadrotor simulation vs DDP baseline",
+    "where": "Secs. IV-V"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "race car (sim)",
+   "quadrotor (sim)"
+  ],
+  "objective_representation": "linear (with hard indicator crash costs)",
+  "not_read": null
+ },
+ {
+  "cluster": "C2",
+  "ref": "arxiv:2409.15610",
+  "claims": [
+   {
+    "claim": "Diffusion-style dual annealing of sampling covariance (over MPPI iterations and over horizon depth) reduces walk-tracking error 7.9-9.6x vs tuned MPPI variants and 22.7x vs CMA-ES on a full-order Unitree Go2 torque-control task.",
+    "grade": "E2",
+    "quantitative": "tracking error 0.024 (DIAL-MPC) vs 0.190/0.230 (MPPI-explore/exploit) vs 0.544 (CMA-ES)",
+    "setting": "Brax/JAX sim + real Go2, 2048 samples, 20-step horizon, 50 Hz, RTX 4090",
+    "where": "Results tables (Walk Track)",
+    "bears_HA": "contradicts",
+    "bears_HB": "neutral"
+   },
+   {
+    "claim": "Training-free sampling MPC beats a goal-conditioned RL policy by 50% on crate climbing (90% vs 20-30% success for MPPI baselines) and needs fewer reward terms than the RL baseline (6 vs 8).",
+    "grade": "E2",
+    "quantitative": "0.9 success vs 0.2-0.3 (MPPI/CMA-ES); GCRL tracking 4.96x worse",
+    "setting": "Unitree Go2 sim + hardware jumping with payload; H1 humanoid crate-pushing",
+    "where": "Sec. V experiments",
+    "bears_HA": "supports",
+    "bears_HB": "neutral"
+   },
+   {
+    "claim": "The capability level demonstrated (agile jumping, climbing) required 2048 parallel GPU rollouts, an order of magnitude above a K<=256 CPU budget.",
+    "grade": "E2",
+    "quantitative": "2048 samples on RTX 4090, JAX/Brax",
+    "setting": "all DIAL-MPC experiments",
+    "where": "implementation details",
+    "bears_HA": "contradicts",
+    "bears_HB": "neutral"
+   }
+  ],
+  "cpu_feasible": false,
+  "morphologies": [
+   "Unitree Go2 quadruped (sim+real)",
+   "Unitree H1 humanoid (sim)"
+  ],
+  "objective_representation": "linear (6-8 weighted reward terms)",
+  "not_read": null
+ },
+ {
+  "cluster": "C2",
+  "ref": "arxiv:2212.00541",
+  "claims": [
+   {
+    "claim": "Real-time derivative-free predictive control on CPU (1-20 ms planning updates via multithreaded MuJoCo rollouts) is feasible across humanoid standing/recovery, quadruped terrain traversal, and Shadow-Hand cube reorientation with one framework.",
+    "grade": "E1",
+    "quantitative": "1-20 ms per planning iteration on 72-core Xeon and Apple M1 Pro",
+    "setting": "MJPC: 27-DoF humanoid, Unitree A1, Shadow Hand, MuJoCo CPU",
+    "where": "Sec. on experiments/timing",
+    "bears_HA": "supports",
+    "bears_HB": "neutral"
+   },
+   {
+    "claim": "Trivial random search over spline-parameterized controls (Predictive Sampling: N-1 Gaussian samples around a nominal, keep the best) is competitive with iLQG and gradient descent, but the paper reports no quantitative planner comparison.",
+    "grade": "E4",
+    "quantitative": null,
+    "setting": "MJPC tasks",
+    "where": "abstract + discussion",
+    "bears_HA": "supports",
+    "bears_HB": "neutral"
+   },
+   {
+    "claim": "Cost specification is per-task hand-tuned weighted norms over residuals (quadratic, cosh, smooth-abs) with an optional exponential risk transform rho(l,R)=(e^{Rl}-1)/R; no bounded/fulfillment-logic composition exists in this canonical framework.",
+    "grade": "E4",
+    "quantitative": null,
+    "setting": "MJPC cost API",
+    "where": "cost specification section",
+    "bears_HA": "supports",
+    "bears_HB": "neutral"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "27-DoF humanoid (sim)",
+   "Unitree A1 quadruped (sim)",
+   "Shadow Hand (sim)"
+  ],
+  "objective_representation": "linear (weighted norms of residuals) + risk transform",
+  "not_read": null
+ },
+ {
+  "cluster": "C2",
+  "ref": "arxiv:2310.16828",
+  "claims": [
+   {
+    "claim": "A single 317M-parameter learned world model with MPPI-style latent planning performs 80 tasks across embodiments and action spaces (zero-padded/masked actions), and one hyperparameter set works across 104 online RL tasks.",
+    "grade": "E2",
+    "quantitative": "80-task agent, ~70.6 normalized score; 104 tasks, single hyperparameter set",
+    "setting": "DMControl (incl. Dog/Humanoid, up to 38-D actions) + Meta-World; RTX 3090",
+    "where": "Sec. 4, multitask results",
+    "bears_HA": "supports",
+    "bears_HB": "supports"
+   },
+   {
+    "claim": "The learned-model route to morphology generality costs 33 GPU-days of training for the 317M agent and uses 512-sample planning over a neural model, incompatible with a training-free CPU MuJoCo stack.",
+    "grade": "E2",
+    "quantitative": "33 GPU-days (317M), 512 samples, horizon 3, 6 iterations",
+    "setting": "training cost table",
+    "where": "compute appendix",
+    "bears_HA": "supports",
+    "bears_HB": "neutral"
+   }
+  ],
+  "cpu_feasible": false,
+  "morphologies": [
+   "DMControl suite incl. Dog, Humanoid",
+   "Meta-World arm (50 tasks)"
+  ],
+  "objective_representation": "learned (latent reward/value model)",
+  "not_read": null
+ },
+ {
+  "cluster": "C2",
+  "ref": "arxiv:2606.25123",
+  "claims": [
+   {
+    "claim": "MPPI with K=128 CPU MuJoCo rollouts runs at ~280 Hz average on a 29-DoF Unitree G1 (sim) when seeded by a pretrained RL policy as sampling prior, using 2 spline knots and a 0.02 s horizon.",
+    "grade": "E4",
+    "quantitative": "N=128, ~280 Hz, i9-14900KF CPU (rollouts CPU-side via MJPC)",
+    "setting": "MuJoCo sim, G1 humanoid, asynchronous planning",
+    "where": "implementation + timing",
+    "bears_HA": "supports",
+    "bears_HB": "supports"
+   },
+   {
+    "claim": "MPPI as a feedback layer on top of RL cuts lateral drift RMSE from 0.339 m to 0.022 m (15x) vs pure RL under the same command interface, using tiny quadratic cost terms.",
+    "grade": "E4",
+    "quantitative": "lateral RMSE 0.339->0.022 m; lateral velocity RMSE 0.046->0.021 m/s",
+    "setting": "G1 straight-walk and squat tasks, sim only",
+    "where": "results tables",
+    "bears_HA": "supports",
+    "bears_HB": "supports"
+   },
+   {
+    "claim": "The direction of coupling is RL-into-MPPI (policy as sampling prior), the reverse of MPPI-as-teacher; a pretrained RL policy was required, not produced.",
+    "grade": "E4",
+    "quantitative": null,
+    "setting": "framework design",
+    "where": "method section",
+    "bears_HA": "neutral",
+    "bears_HB": "supports"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "Unitree G1 humanoid 29-DoF (sim)"
+  ],
+  "objective_representation": "linear (quadratic tracking terms, modular)",
+  "not_read": null
+ },
+ {
+  "cluster": "C2",
+  "ref": "arxiv:2601.01409",
+  "claims": [
+   {
+    "claim": "Sampling parameterization dominates MPPI performance on legged robots: cubic-spline knots (k=4) achieve 100% success on flat walking, stairs, and box traversal where unstructured per-timestep Gaussian sampling scores 60%, 0%, and 0% respectively under identical costs.",
+    "grade": "E4",
+    "quantitative": "stairs: cubic k=4 100% vs baseline 0%; flat: 444 vs 1358 steps to goal",
+    "setting": "Unitree quadruped sim, 5 trials/task, 21-46 ms/iteration",
+    "where": "results tables (3 tasks x 4 samplers)",
+    "bears_HA": "supports",
+    "bears_HB": "neutral"
+   },
+   {
+    "claim": "Over-parameterization hurts: k=8 knots degraded box-traversal robustness to 80% vs 100% at k=4, supporting low-dimensional smooth sampling as the design principle.",
+    "grade": "E4",
+    "quantitative": "k=8: 80% vs k=4: 100% on box traversal",
+    "setting": "same benchmark",
+    "where": "ablation",
+    "bears_HA": "supports",
+    "bears_HB": "neutral"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "Unitree quadruped (sim)"
+  ],
+  "objective_representation": "linear (identical weighted cost across samplers)",
+  "not_read": null
+ },
+ {
+  "cluster": "C2",
+  "ref": "arxiv:2409.10469",
+  "claims": [
+   {
+    "claim": "Real-world whole-body MPPI on a Unitree Go1 works with only 30-50 CPU MuJoCo rollouts at 100 Hz (cubic splines, 4 knots, 0.4 s horizon), handling walking, climbing obstacles at robot height (0.24 m), and box pushing with one controller and no offline training.",
+    "grade": "E1",
+    "quantitative": "30-50 samples, 100 Hz, i9-12900KS; box pushing 9/10 forward, 6/10 lateral",
+    "setting": "real Go1 + MuJoCo planning",
+    "where": "Sec. experiments",
+    "bears_HA": "supports",
+    "bears_HB": "neutral"
+   },
+   {
+    "claim": "Loco-manipulation emerges from adding an L1 box-position term to a tracking cost, i.e. task recomposition by cost editing rather than retraining.",
+    "grade": "E4",
+    "quantitative": null,
+    "setting": "box-pushing task",
+    "where": "cost design section",
+    "bears_HA": "supports",
+    "bears_HB": "neutral"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "Unitree Go1 quadruped (real+sim)"
+  ],
+  "objective_representation": "linear (quadratic tracking + L1 object term)",
+  "not_read": null
+ },
+ {
+  "cluster": "C2",
+  "ref": "arxiv:2511.19204",
+  "claims": [
+   {
+    "claim": "Reference-free MPPI with jointly-sampled cubic Hermite splines (position and velocity control points) plus annealing discovers emergent gaits (walk, trot, gallop, jump, backflip, handstand) from cost objectives alone, with 30 samples on a real Go2 and 60-70 samples on a 37-DoF G1 in sim, all real-time on standard CPU.",
+    "grade": "E4",
+    "quantitative": "30 samples (quadruped) vs 2048-4096 for GPU competitors; 60-70 (humanoid)",
+    "setting": "real Go2, sim G1, CPU only",
+    "where": "Table I, experiments",
+    "bears_HA": "supports",
+    "bears_HB": "neutral"
+   },
+   {
+    "claim": "The same framework transfers quadruped-to-humanoid without algorithmic modification or retuning of the sampler, the closest published morphology-generality claim for pure sampling MPC.",
+    "grade": "E4",
+    "quantitative": null,
+    "setting": "Go2 + G1",
+    "where": "discussion",
+    "bears_HA": "supports",
+    "bears_HB": "neutral"
+   },
+   {
+    "claim": "Hermite splines beat cubic and quadratic spline sampling in trajectory cost and success rate in ablation, replicating (with a third group) the structured-sampling finding.",
+    "grade": "E1",
+    "quantitative": null,
+    "setting": "ablation Table III",
+    "where": "Table III",
+    "bears_HA": "supports",
+    "bears_HB": "neutral"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "Unitree Go2 quadruped (real)",
+   "Unitree G1 humanoid 37-DoF (sim)"
+  ],
+  "objective_representation": "linear (modular: base tracking, joint regularization, contact penalties, terminal displacement)",
+  "not_read": null
+ },
+ {
+  "cluster": "C2",
+  "ref": "arxiv:1811.01848",
+  "claims": [
+   {
+    "claim": "MPPI (120 rollouts, CPU) plus a learned ensemble value function solves humanoid getup in ~24 CPU core-hours vs ~128 for policy-gradient methods, and in-hand reorientation in ~1 CPU-hour vs ~500 for model-free RL: 5-500x sample/compute efficiency from planning-accelerated value learning.",
+    "grade": "E2",
+    "quantitative": "24 vs 128 core-hours (humanoid); 1 vs 500 CPU-hours (hand)",
+    "setting": "MuJoCo humanoid + dexterous hand, 120/80 MPPI rollouts, H=64",
+    "where": "Sec. 4 experiments",
+    "bears_HA": "supports",
+    "bears_HB": "supports"
+   },
+   {
+    "claim": "A terminal value function substitutes for planning horizon: shorter-horizon MPC with learned V matches longer-horizon value-free MPC, and trajectory optimization stabilizes value learning (the mechanism H-B relies on, demonstrated in 2018).",
+    "grade": "E2",
+    "quantitative": "N-step targets accelerate convergence (Fig. 4a)",
+    "setting": "same",
+    "where": "Fig. 4",
+    "bears_HA": "neutral",
+    "bears_HB": "supports"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "MuJoCo humanoid (sim)",
+   "dexterous hand (sim)"
+  ],
+  "objective_representation": "linear (reward + learned terminal value)",
+  "not_read": null
+ },
+ {
+  "cluster": "C2",
+  "ref": "arxiv:2502.13406",
+  "claims": [
+   {
+    "claim": "The sampling-MPC update is a Monte Carlo estimate of score ascent on a noised target distribution, so SPC can supervise flow-matching policy training without demonstrations; the resulting GPC policies match or beat PPO with equivalent data on 7 systems up to 29 DoF.",
+    "grade": "E4",
+    "quantitative": "GPC/GPC+ on par or better than PPO; training 30 s (pendulum) to 113 min (humanoid) on RTX 4070",
+    "setting": "MuJoCo MJX/JAX, sim only: pendulum to humanoid standup",
+    "where": "theory Sec. 3 + results",
+    "bears_HA": "neutral",
+    "bears_HB": "supports"
+   },
+   {
+    "claim": "Pure distillation of the sampling-MPC teacher fails on the hardest task (humanoid standup); only GPC+, which keeps the policy in the loop seeding SPC at deployment, remains effective, and warm-starting is critical (without it actions jitter between modes).",
+    "grade": "E4",
+    "quantitative": "basic GPC fails reliably on humanoid standup; GPC+ succeeds",
+    "setting": "humanoid standup",
+    "where": "results/limitations",
+    "bears_HA": "neutral",
+    "bears_HB": "contradicts"
+   },
+   {
+    "claim": "Teacher cost and student objective are linked only through sampled (state,action) data, not a shared spec; the student has no reward, it is a generative model of teacher actions.",
+    "grade": "E4",
+    "quantitative": null,
+    "setting": "framework design",
+    "where": "method",
+    "bears_HA": "neutral",
+    "bears_HB": "supports"
+   }
+  ],
+  "cpu_feasible": false,
+  "morphologies": [
+   "pendulum",
+   "cart-pole",
+   "double cart-pole",
+   "push-T",
+   "planar walker",
+   "luffing crane",
+   "humanoid (sim)"
+  ],
+  "objective_representation": "linear (standard running+terminal costs)",
+  "not_read": null
+ },
+ {
+  "cluster": "C2",
+  "ref": "arxiv:2511.08019",
+  "claims": [
+   {
+    "claim": "The MPPI softmax mean update is the closed-form global optimum of a concave KL objective at fixed covariance, and the framework accepts arbitrary cost functions including discontinuous penalties and indicator functions - so bounded [0,1] fulfillment values are formally admissible inputs to the Boltzmann weighting.",
+    "grade": "E3",
+    "quantitative": null,
+    "setting": "tutorial/survey of PI-MPC (MPPI, CEM, VI-MPC, SVGD, diffusion samplers)",
+    "where": "Eq. 6, 12-13, Sec. 3",
+    "bears_HA": "supports",
+    "bears_HB": "neutral"
+   },
+   {
+    "claim": "The survey provides no taxonomy of cost shaping and explicitly does not discuss multi-objective composition; constraint handling is limited to clamping, penalties, projection, or SVGD - confirming that bounded fulfillment-logic cost composition in sampling MPC is unmapped territory in the field's own self-survey.",
+    "grade": "E3",
+    "quantitative": null,
+    "setting": "same",
+    "where": "Sec. 3.3 and absence throughout",
+    "bears_HA": "supports",
+    "bears_HB": "neutral"
+   }
+  ],
+  "cpu_feasible": null,
+  "morphologies": [],
+  "objective_representation": "other (survey; costs left general)",
+  "not_read": null
+ },
+ {
+  "cluster": "C2",
+  "ref": "arxiv:2311.02304",
+  "claims": [
+   {
+    "claim": "Imitate-then-finetune from an MPC expert (DAgger then RL) converges in ~2000 iterations vs ~4000 for RL from scratch on quadruped locomotion - a 2x iteration speedup, the concrete effect-size anchor for the MPC-teacher hypothesis.",
+    "grade": "E2",
+    "quantitative": "~2000 vs ~4000 iterations; inference 15.4 ms (MPC) -> 1 ms (policy)",
+    "setting": "RaiSim sim + Mini Cheetah hardware; DDP-based MPC expert",
+    "where": "learning curves",
+    "bears_HA": "neutral",
+    "bears_HB": "supports"
+   },
+   {
+    "claim": "The RL fine-tuning reward is deliberately different from the MPC cost (simple velocity-tracking/torque reward, optionally with contact biasing, vs the MPC's state-tracking cost), and the pipeline still works and surpasses the teacher (90% vs 0% success on 7.5 cm obstacles).",
+    "grade": "E2",
+    "quantitative": "90% vs 0% MPC success on 7.5 cm obstacles",
+    "setting": "same",
+    "where": "Sec. reward design + hardware results",
+    "bears_HA": "neutral",
+    "bears_HB": "contradicts"
+   },
+   {
+    "claim": "MPC pre-training prevents jerky asymmetric gaits and reduces reward engineering vs pure RL, i.e. the teacher's main gift is a behavior basin, not the cost function itself.",
+    "grade": "E2",
+    "quantitative": null,
+    "setting": "same",
+    "where": "discussion",
+    "bears_HA": "neutral",
+    "bears_HB": "supports"
+   }
+  ],
+  "cpu_feasible": null,
+  "morphologies": [
+   "Mini Cheetah quadruped (real+sim)"
+  ],
+  "objective_representation": "linear (MPC tracking cost; separate RL reward)",
+  "not_read": null
+ },
+ {
+  "cluster": "C2",
+  "ref": "arxiv:2503.11717",
+  "claims": [
+   {
+    "claim": "Butterworth low-pass filtering of sampled MPPI perturbations (uniform passband, unlike colored noise's 1/f damping) improves over vanilla MPPI, SMPPI, SCP-MPPI, and ColoredMPPI across Gymnasium (~10%, up to 26-36% vs SMPPI/SCP-MPPI), quadruped trot sim (24-41% over a DIAL-MPC baseline), and real F1TENTH racing, at negligible compute overhead.",
+    "grade": "E2",
+    "quantitative": "+10% Gymnasium avg; 24-41% over DIAL-MPC baseline (quadruped); +2.4% overhead",
+    "setting": "Hopper/Ant/HalfCheetah, Go2 + Silver Badger sim, real F1TENTH; N=10 and N=50 rollouts",
+    "where": "results tables",
+    "bears_HA": "supports",
+    "bears_HB": "neutral"
+   },
+   {
+    "claim": "Gains hold at N=10 and N=50 rollouts with only two interpretable parameters (cutoff frequency, filter order), so a morphology-spanning sampler improvement exists inside the CPU K<=256 budget - and it is distinct from the colored-noise mechanism the in-repo negative tested.",
+    "grade": "E2",
+    "quantitative": "N=10 and N=50 both best-in-class on F1TENTH",
+    "setting": "same",
+    "where": "F1TENTH experiments + method",
+    "bears_HA": "supports",
+    "bears_HB": "neutral"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "Hopper/Ant/HalfCheetah (sim)",
+   "Unitree Go2 + MAB Silver Badger quadrupeds (sim)",
+   "F1TENTH car (real)"
+  ],
+  "objective_representation": "linear",
+  "not_read": null
+ },
+ {
+  "cluster": "C3",
+  "ref": "arxiv:1707.02342",
+  "claims": [
+   {
+    "claim": "The MPPI softmax weighting is derived as the exact free-energy/KL-optimal tilted distribution q*(V) \u221d exp(-S/\u03bb)p(V); the algorithm is the KL projection of this optimum onto Gaussians, and the derivation places no smoothness, convexity, or boundedness requirements on the state cost \u2014 any transform (including FPL's S=-log(u)) is admissible without altering optimality.",
+    "grade": "E1",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "Theory + AutoRally 1/5-scale vehicle, 1200 samples, GTX-750ti, 40 Hz",
+    "where": "Eqs. 5, 9, 14-15, 22; Sec. III-D3"
+   },
+   {
+    "claim": "Derivative-free handling of discontinuous costs and constraint clamping pushed into dynamics enables aggressive dirt-track driving at 40-60 Hz, outperforming a cross-entropy MPC baseline over 1700+ laps / 100+ km.",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "1200 rollouts at 40 Hz; ~4.8M dynamics queries/s; 1700+ laps of validation",
+    "setting": "AutoRally hardware and simulation",
+    "where": "Sec. III-D5, V-A, VI-A, VII"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "1/5-scale ground vehicle (AutoRally)"
+  ],
+  "objective_representation": "linear",
+  "not_read": null
+ },
+ {
+  "cluster": "C3",
+  "ref": "arxiv:2104.00241",
+  "claims": [
+   {
+    "claim": "The cost-to-weight transform is a free design axis: replacing exp with the deformed exponential exp_q interpolates continuously between MPPI (q\u21921) and CEM's top-elite indicator (q\u2192\u221e), with an explicit absolute-risk-aversion interpretation \u2014 the closest published theoretical frame for FPL's log-power-mean cost transform.",
+    "grade": "E3",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "Theory (RSS 2021)",
+    "where": "Eqs. 6, 10, 28, 33; Sec. IV-B"
+   },
+   {
+    "claim": "Tsallis-transformed weighting lowers cost mean and especially variance versus both MPPI and CEM across five morphologies at only N=64 samples, showing weight-transform design alone yields robustness gains without touching the sampler.",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "Variance reduction 60-85% on navigation/manipulation; humanoid mean cost 112% better vs MPPI (Table IV); N=64 rollouts",
+    "setting": "Planar nav, quadcopter, 7-DOF Franka, Ant, 21-DOF humanoid; UG/GM/SVGD policies",
+    "where": "Sec. VI-B/VI-C, Tables IV-V"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "planar point mass",
+   "quadcopter",
+   "Franka 7-DOF arm",
+   "Ant",
+   "21-DOF humanoid"
+  ],
+  "objective_representation": "other (deformed-exponential weight transform)",
+  "not_read": null
+ },
+ {
+  "cluster": "C3",
+  "ref": "arxiv:1509.01149",
+  "claims": [
+   {
+    "claim": "Sampling with altered covariance is only valid with a likelihood-ratio correction that enters as an additional running cost (a term penalizing over-aggressive exploration plus Girsanov terms); adaptive-covariance schemes omitting it bias the estimator \u2014 a candidate post-mortem for the program's failed adaptive-covariance sampler.",
+    "grade": "E3",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "Theory (Theorem 1) + GPU simulation",
+    "where": "Sec. III-A/III-B, Eqs. 27-31, 48"
+   },
+   {
+    "claim": "Large exploration-variance inflation (nu = 50-1500x natural noise) is necessary for MPPI to solve cart-pole swing-up and beat DDP on aggressive racing \u2014 fixed but well-scaled covariance, not adaptation, is what matters.",
+    "grade": "E3",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "Cart-pole unsolvable without inflation (cost ~2000); solved with nu=1500 at 1000 samples; race car needs nu 50-300x",
+    "setting": "Cart-pole, race car, quadrotor obstacle field; 10-1000 rollouts, GPU, 50 Hz",
+    "where": "Sec. V, Figs. 1-2, 5-6"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "cart-pole",
+   "race car",
+   "quadrotor"
+  ],
+  "objective_representation": "linear",
+  "not_read": null
+ },
+ {
+  "cluster": "C3",
+  "ref": "arxiv:2401.07369",
+  "claims": [
+   {
+    "claim": "MPPI provably converges at least linearly on quadratic objectives, and the rate depends explicitly on sampling covariance; the convergence-optimal covariance schedule exists in closed form but requires the cost Hessian.",
+    "grade": "E3",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "Theory: time-varying LQR, extended to nonlinear",
+    "where": "Main theorems (32-page L4DC 2024 paper)"
+   },
+   {
+    "claim": "Optimal covariance design (CoVO-MPC) beats standard MPPI by 43-54% on quadrotor agile control \u2014 proof that fixed isotropic Gaussians are suboptimal in principle, yet the required Hessian information is unavailable in a derivative-free CPU MuJoCo pipeline, rationalizing why fixed Gaussians are the practical optimum at K<=256.",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "43-54% cost improvement over MPPI, sim and real quadrotor",
+    "setting": "Simulation + real quadrotor",
+    "where": "Abstract, experiments section"
+   }
+  ],
+  "cpu_feasible": false,
+  "morphologies": [
+   "quadrotor"
+  ],
+  "objective_representation": "linear",
+  "not_read": null
+ },
+ {
+  "cluster": "C3",
+  "ref": "arxiv:2102.09027",
+  "claims": [
+   {
+    "claim": "Standard MPPI's failure mode under disturbance is the importance sampler staying anchored to an open-loop nominal trajectory, causing unbounded free-energy jumps when the real state diverges; free-energy growth is bounded jointly by constraint slack, tracking-controller contraction rate, and Monte-Carlo sampling error.",
+    "grade": "E3",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "Theory (RA-L 2021)",
+    "where": "Lemma 3 / Eq. 16; Secs. II-III"
+   },
+   {
+    "claim": "RMPPI's augmented nominal/real-state importance sampling permits more aggressive operation than MPPI or Tube-MPPI under disturbances without violating free-energy bounds \u2014 robustness under mismatch requires either architectural augmentation or (hypothesis for FPL) bounded costs that cap weight ratios.",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "Target speed 9 m/s vs 7 m/s for MPPI/Tube-MPPI in sim; hardware laps 31.07\u00b10.33 s at higher max slip (0.84 rad); ~15 laps per controller",
+    "setting": "AutoRally Gazebo sim + 1/5-scale hardware, iLQG and CCM tracking controllers, GPU",
+    "where": "Table I, Figs. 2-3, Algorithm 1"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "1/5-scale ground vehicle (AutoRally)"
+  ],
+  "objective_representation": "constrained",
+  "not_read": null
+ },
+ {
+  "cluster": "C3",
+  "ref": "arxiv:2409.15610",
+  "claims": [
+   {
+    "claim": "Diffusion-style dual-loop annealing of sampling covariance (exponential decay across outer iterations, larger variance for later horizon steps) reduces quadruped torque-level tracking error vs fixed-covariance MPPI by up to 13.4x and beats RL by 50% on climbing \u2014 the strongest published counterexample to 'fixed-Gaussian MPPI is unbeatable', but at 2048 samples x multiple anneal iterations on an RTX 4090 (JAX/Brax), far outside a K<=256 CPU budget.",
+    "grade": "E2",
+    "bears_HA": "contradicts",
+    "bears_HB": "neutral",
+    "quantitative": "Walk tracking 0.024 vs 0.190-0.230 (MPPI explore/exploit), 13.4x aggregate; climbing success 0.9 vs 0.2-0.3; 2048 samples, 50 Hz, RTX 4090",
+    "setting": "Unitree Go2-class quadruped, Brax/JAX GPU, sim + hardware",
+    "where": "Eqs. 5-7, Prop. 1, Tables I, III, Fig. 4"
+   },
+   {
+    "claim": "Under 2 kg mass-model mismatch, annealed sampling retains 92-126% better performance than fixed-covariance MPPI \u2014 sampler design, not only cost design, can buy mismatch robustness given GPU-scale budgets.",
+    "grade": "E2",
+    "bears_HA": "contradicts",
+    "bears_HB": "supports",
+    "quantitative": "Walking error 0.188 vs 0.361; jumping reward 0.610 vs 0.270 under 2 kg mismatch",
+    "setting": "Quadruped sim with mass error",
+    "where": "Table III"
+   }
+  ],
+  "cpu_feasible": false,
+  "morphologies": [
+   "quadruped (torque-level, full-order)"
+  ],
+  "objective_representation": "linear",
+  "not_read": null
+ },
+ {
+  "cluster": "C3",
+  "ref": "arxiv:2503.01476",
+  "claims": [
+   {
+    "claim": "Non-differentiable min/max-composed STL robustness costs are used directly (unsmoothed) inside a path-integral optimizer that anneals both covariance and temperature toward the deterministic limit \u2014 the closest published prior art to logic-structured costs in MPPI and mandatory citation for FPL novelty claims.",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "ICRA 2025; CPU only (AMD Ryzen 5 PRO 7540U)",
+    "where": "Sec. II-B, III (Eq. 7a-b), IV-B (Eq. 12), Algorithm 1"
+   },
+   {
+    "claim": "On a nested STL problem with a kinematic car (horizon 50), annealed path integral converges in 25 s while MIP and gradient methods exceed a 1-hour timeout and only CMA-ES also solves it (80 s) \u2014 sampling handles logic-composed nonsmooth landscapes where model-based smoothing solvers fail, but needed up to 81k samples over 40 iterations.",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "PI 25.07 s vs CMA-ES 79.82 s; MIP/GRAD/SGRAD >3600 s; M up to 81,650 samples, J=40 iterations",
+    "setting": "Scalar integrator, 2D double integrator, kinematic single-track vehicle; CPU",
+    "where": "Sec. V, Tables I-II"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "scalar integrator",
+   "2D double integrator",
+   "kinematic single-track vehicle"
+  ],
+  "objective_representation": "logic",
+  "not_read": null
+ },
+ {
+  "cluster": "C3",
+  "ref": "arxiv:2309.11040",
+  "claims": [
+   {
+    "claim": "A single Stein-variational guide particle that moves only MPPI's nominal sequence toward a mode (preserving the closed-form update) cuts collision rate from 13.6% to 4.0% (sim) and 55.6% to 15.4% (real) at 11 ms on CPU \u2014 mode-seeking guidance can beat vanilla MPPI cheaply when it augments rather than replaces the estimator, unlike the program's failed GMM+SUS resampling.",
+    "grade": "E2",
+    "bears_HA": "contradicts",
+    "bears_HB": "neutral",
+    "quantitative": "Collision rate 4.0% vs 13.6% (sim), 15.4% vs 55.6% (real); path-tracking cost 0.20 vs 1.36; 11.0 ms avg on Core i9 CPU; Kg=1 guide particle",
+    "setting": "1/10-scale vehicle, sim + real, 2k-8k MPPI samples, CPU only",
+    "where": "Eqs. 9, 12-13; Sec. IV-B, V-B/V-C, Tables I-II"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "1/10-scale ground vehicle"
+  ],
+  "objective_representation": "linear",
+  "not_read": null
+ },
+ {
+  "cluster": "C3",
+  "ref": "arxiv:2511.08019",
+  "claims": [
+   {
+    "claim": "The MPC-as-inference survey's design taxonomy (prior design, posterior family, temperature, constraints, scalability, theory) contains no dedicated treatment of cost-function design or pre-Boltzmann cost transformation \u2014 the survey explicitly assumes costs are given \u2014 confirming FPL occupies an unclaimed design axis.",
+    "grade": "E4",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "Survey/tutorial preprint (2025)",
+    "where": "Secs. 3.2, 4.1-4.2; Eq. 2"
+   },
+   {
+    "claim": "The survey's theory section reports only linear convergence for infinite-sample quadratic costs and notes finite-sample convergence and required-sample estimation remain open, with no stability analysis for general nonlinear MPPI \u2014 the theoretical basis for beating (or certifying) warm-started MPPI is thin.",
+    "grade": "E4",
+    "bears_HA": "neutral",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "Survey",
+    "where": "Secs. 3.2.4, 4.2.1"
+   }
+  ],
+  "cpu_feasible": null,
+  "morphologies": [],
+  "objective_representation": null,
+  "not_read": null
+ },
+ {
+  "cluster": "C3",
+  "ref": "arxiv:2607.14245",
+  "claims": [
+   {
+    "claim": "Closing the temperature loop with Shannon entropy of importance weights (cool aggressively when weights diffuse, hold when concentrated; lambda_{j+1}=Gamma(H)lambda_j) provably drives lambda to 0 eliminating MPPI bias, with a critical entropy threshold guarding against premature weight collapse ('glassification').",
+    "grade": "E4",
+    "bears_HA": "neutral",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "Theory (Theorems 1-2), 2026 preprint",
+    "where": "Secs. IV-V"
+   },
+   {
+    "claim": "On nonsmooth STL motion-planning tasks (2D point mass, N=3000 rollouts), entropy-feedback cooling converges up to 4.1x faster than fixed schedules and lifts success on the hardest corridor task from 16% to 22% \u2014 temperature adaptation helps in iteration-rich deterministic planning, a regime distinct from the warm-started receding-horizon loop.",
+    "grade": "E4",
+    "bears_HA": "neutral",
+    "bears_HB": "neutral",
+    "quantitative": "13 vs 48 iterations (Task B); up to 4.14x compute reduction; success 22% vs 16% (Task C); 100 trials/task",
+    "setting": "2D point-mass STL reach-avoid/corridor, N=3000",
+    "where": "Sec. VI-C, Table II"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "2D point mass"
+  ],
+  "objective_representation": "logic",
+  "not_read": null
+ },
+ {
+  "cluster": "C3",
+  "ref": "arxiv:2607.06950",
+  "claims": [
+   {
+    "claim": "Adapting conservatism online from prediction-execution residuals (constraint tightening m=L_h(c_r*s+c_0), penalty scaling alpha=alpha_0(1+gamma*s), exploration contraction plus temperature relaxation) lifts success under actuator-lag mismatch from 0.64 to 0.94 (LTI point mass) and 0.56 to 0.96 (2R manipulator) vs vanilla MPPI \u2014 evidence that residual-adaptive mechanisms beat a fixed configuration under mismatch, though only on toy systems.",
+    "grade": "E4",
+    "bears_HA": "contradicts",
+    "bears_HB": "neutral",
+    "quantitative": "Success 0.64\u21920.94 and 0.56\u21920.96; violation steps 4.16\u21920.62 and 3.08\u21920.10; K=2048/1024 rollouts, 50 paired-seed trials",
+    "setting": "LTI point mass (T=40) and planar 2R manipulator (T=35) with servo lag, saturation, inertial errors",
+    "where": "Theorem 1, Props. 2-3, results tables"
+   },
+   {
+    "claim": "Model-plant mismatch perturbs MPPI importance weights by at most 2*C_a*s/beta, so raising temperature when residuals grow provably reduces overcommitment to unreliable cost rankings \u2014 a weighting-side (not sampler-side) robustness mechanism consistent with the program's cost-side-wins pattern.",
+    "grade": "E4",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "Weight L1 perturbation bound 2*C_a*s\u0304/\u03b2",
+    "setting": "Theory, sub-Gaussian disturbance + Lipschitz dynamics",
+    "where": "Proposition 3"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "LTI point mass",
+   "planar 2R manipulator"
+  ],
+  "objective_representation": "constrained",
+  "not_read": null
+ },
+ {
+  "cluster": "C3",
+  "ref": "arxiv:2607.08942",
+  "claims": [
+   {
+    "claim": "For spatially varying unknown disturbance covariance, a cell-wise recursive estimator with reversible spatial-diffusion smoothing yields an adaptive stability certificate that becomes strictly tighter than ANY fixed covariance choice after a computable finite crossover time (payoff theorem) \u2014 adaptivity provably wins, but only asymptotically and so far only in LTI-style simulation with very long horizons (T=8000).",
+    "grade": "E4",
+    "bears_HA": "contradicts",
+    "bears_HB": "neutral",
+    "quantitative": "Estimation error bound C1/sqrt(k) + smoothing bias + Cv*eps_v*T; crossover time k* <= T",
+    "setting": "Theory + grid-cell simulation, 19-page 2026 preprint, companion to 2607.04006",
+    "where": "Theorem 2 / Sec. IV-D, Eq. 9, Lemma 1, Sec. V"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "abstract LTI / grid simulation"
+  ],
+  "objective_representation": "linear",
+  "not_read": null
+ },
+ {
+  "cluster": "C4",
+  "ref": "arxiv:2503.05818",
+  "claims": [
+   {
+    "claim": "FPL defines fulfillment as bounded [0,1] values composed by weighted power means (p from -inf min to +inf max), with negation 1-u, disjunction via De Morgan, and soft-lexicographic priority via offset operator u([phi]_delta)=(u(phi)+max(delta,0))/(1+delta).",
+    "grade": "E4",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "Formalism section",
+    "where": "Secs. 3-4 (FPL semantics)"
+   },
+   {
+    "claim": "FQ-values are defined as (1-gamma)*Q, i.e. discount-normalized Q-values in [0,1]; the paper's Balanced Policy Gradient (DDPG extension) regularizes the critic with observed discounted fulfillment sums to counter overestimation bias.",
+    "grade": "E4",
+    "bears_HA": "neutral",
+    "bears_HB": "supports",
+    "quantitative": "critic Q-error 0.627 -> 0.146 with alpha_FV=0.75 on Hopper at 38k steps",
+    "setting": "Gym MuJoCo benchmarks",
+    "where": "Sec. 5, Algorithm 1"
+   },
+   {
+    "claim": "BPG with an FPL spec is markedly more sample-efficient than strong RL baselines: LunarLander 20k steps to reward 200 vs 128k (DDPG) and 36k (CrossQ); Hopper 27.4k steps to 2000 vs 66.6k (CrossQ); with FPL the Hopper reward-hacking mode (standing still for ~1000 reward) is eliminated (FPL fulfillment 3.8e-5 for it), yielding 2288 vs 750 average reward at 48k steps over 10 seeds.",
+    "grade": "E4",
+    "bears_HA": "supports",
+    "bears_HB": "supports",
+    "quantitative": "up to ~5x sample-efficiency vs SAC; 84% fewer steps vs DDPG on LunarLander; FPL spec score 0.625 vs 0.194 without",
+    "setting": "Pendulum, Reacher, Hopper, LunarLander (+ preliminary HalfCheetah/Walker2d/Ant)",
+    "where": "Sec. 6, results tables"
+   },
+   {
+    "claim": "The FPL paper contains no mention of MPC, MPPI, or planning; it acknowledges lower asymptotic performance of BPG and sensitivity to FQ overestimation as limitations.",
+    "grade": "E4",
+    "bears_HA": "supports",
+    "bears_HB": "contradicts",
+    "quantitative": null,
+    "setting": null,
+    "where": "Secs. 6-7 (limitations, conclusion)"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "Pendulum",
+   "Reacher",
+   "Hopper",
+   "LunarLander",
+   "HalfCheetah",
+   "Walker2d",
+   "Ant"
+  ],
+  "objective_representation": "logic",
+  "not_read": null
+ },
+ {
+  "cluster": "C4",
+  "ref": "arxiv:2503.01476",
+  "claims": [
+   {
+    "claim": "STL space-robustness costs (raw, non-smoothed min/max semantics) are optimized by a deterministic path-integral method that anneals covariance and temperature by factor nu over J iterations, with proven convergence to the deterministic optimum as M,J -> inf; sampling handles the non-differentiability so no smooth robustness approximation is needed.",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "ICRA 2025",
+    "where": "Secs. III-IV, Eq. 7a/7b"
+   },
+   {
+    "claim": "On a 5D kinematic-vehicle STL benchmark the path-integral solver finds satisfying trajectories in 25s on a laptop CPU (AMD Ryzen 5 PRO 7540U, no GPU) where MIP (Gurobi), gradient SLSQP, and smoothed-robustness SLSQP all time out beyond 3600s; on simpler problems it is near-optimal (cost -2.98 vs MIP -3.0) in 24ms.",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "25.07s vs >3600s timeout for MIP/GRAD/SGRAD; sample budgets M=955-81650 with J=19-75 iterations",
+    "setting": "scalar integrator, 4D motion planning, 5D single-track vehicle",
+    "where": "Table I, Sec. V"
+   },
+   {
+    "claim": "Achieving deterministic STL optimization required M up to 81,650 samples times J=40 iterations on the hardest problem, far beyond a K<=256 per-step MPPI budget.",
+    "grade": "E2",
+    "bears_HA": "contradicts",
+    "bears_HB": "neutral",
+    "quantitative": "3.3M total rollouts for Problem III",
+    "setting": "offline trajectory optimization, not receding horizon",
+    "where": "Table I"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "scalar integrator",
+   "4D point mass",
+   "5D kinematic car"
+  ],
+  "objective_representation": "logic",
+  "not_read": null
+ },
+ {
+  "cluster": "C4",
+  "ref": "arxiv:2603.13333",
+  "claims": [
+   {
+    "claim": "STL-SVPIO transports a mutually repulsive swarm of only 10 control particles via Stein variational gradient descent using exact STL robustness gradients (LogSumExp-smoothed, STLCG++ autodiff through JAX/MJX differentiable simulation), solving nested long-horizon STL tasks.",
+    "grade": "E4",
+    "bears_HA": "neutral",
+    "bears_HB": "neutral",
+    "quantitative": "10 particles vs 1024-2048 for the DPI baseline",
+    "setting": "2D point mass, multi-agent, 7-DoF Franka (MuJoCo MJX), Half-Cheetah backflip",
+    "where": "Secs. III-V"
+   },
+   {
+    "claim": "Plain MPPI with handcrafted costs fails on sparse, long-horizon temporally nested STL objectives: on reach-avoid MPPI attains robustness 0.005 vs STL-SVPIO 0.108, and MPPI fails entirely on multi-agent synchronization; the stated mechanism is exponential decay of importance weights under sparse costs and mode collapse.",
+    "grade": "E4",
+    "bears_HA": "contradicts",
+    "bears_HB": "neutral",
+    "quantitative": "robustness 0.005 vs 0.108; MPPI 0% on coordination tasks",
+    "setting": "100 random seeds",
+    "where": "Sec. V-B, Fig. 3"
+   },
+   {
+    "claim": "The method depends on GPU differentiable simulation (RTX A6000, runtimes 19-593s per solve), incompatible with the program's CPU-MuJoCo no-gradient stack.",
+    "grade": "E4",
+    "bears_HA": "neutral",
+    "bears_HB": "neutral",
+    "quantitative": "19-593s per solve on RTX A6000",
+    "setting": null,
+    "where": "Sec. V"
+   }
+  ],
+  "cpu_feasible": false,
+  "morphologies": [
+   "2D point mass (single/multi-agent)",
+   "7-DoF Franka Panda",
+   "Half-Cheetah"
+  ],
+  "objective_representation": "logic",
+  "not_read": null
+ },
+ {
+  "cluster": "C4",
+  "ref": "arxiv:1903.05186",
+  "claims": [
+   {
+    "claim": "AGM robustness replaces min/max STL semantics with normalized mean-based aggregation bounded in [-1,1]: conjunction/always use a geometric mean of (1+eta) terms, disjunction/eventually use an arithmetic mean of positive parts, rewarding both how robustly and how often subformulae hold, while remaining sound (sign agrees with satisfaction).",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "ACC 2019",
+    "where": "Sec. III, definitions"
+   },
+   {
+    "claim": "Policies optimized with AGM robustness (proximal stochastic gradient ascent) survive Gaussian perturbations better than those optimized with smooth min/max approximations at equal nominal scores: ~59% vs ~42% satisfaction under noise.",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "59% vs 42% satisfaction under Gaussian noise",
+    "setting": "simulated case studies",
+    "where": "Sec. V case studies"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "planar mobile-robot case studies"
+  ],
+  "objective_representation": "logic",
+  "not_read": null
+ },
+ {
+  "cluster": "C4",
+  "ref": "arxiv:2209.12842",
+  "claims": [
+   {
+    "claim": "Adding a CVaR tail-risk penalty to MPPI rollout costs (estimated by N=300 stochastic inner rollouts per each of M=1024 nominal trajectories) cuts collisions by ~80% in simulation and 55.7% on a physical 1/28-scale race car at essentially unchanged lap time (7.38s vs 7.11s).",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "80% fewer collisions (sim), 55.7% fewer (hardware, 9.0 vs 20.3/lap); >=50% reduction across Gaussian/uniform/impulse noise",
+    "setting": "GPU (RTX 3090), track with 10 obstacles, Optitrack",
+    "where": "Secs. IV-V, Eqs. 12/16"
+   },
+   {
+    "claim": "The CVaR mechanism requires 3.07e5 trajectory evaluations per control step to reach 44 Hz on an RTX 3090 - reshaping the rollout cost distribution against tail risk is what buys robustness, but at 1000x the program's sample budget.",
+    "grade": "E2",
+    "bears_HA": "neutral",
+    "bears_HB": "neutral",
+    "quantitative": "3.072e5 rollouts/step; 27.8-81.6 Hz on GPU",
+    "setting": null,
+    "where": "Sec. V"
+   },
+   {
+    "claim": "This paper establishes tail-of-cost-distribution reshaping as a sufficient explanation for robustness gains in MPPI, which is a rival hypothesis to FPL's semantic explanation: bounded [0,1] atoms also compress cost tails before the softmax, so the in-repo FPL Pareto win needs an ablation against clipped/saturated linear costs to rule this out.",
+    "grade": "E3",
+    "bears_HA": "neutral",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "inference across papers",
+    "where": null
+   }
+  ],
+  "cpu_feasible": false,
+  "morphologies": [
+   "1/28-scale autonomous car (dynamic tire model)"
+  ],
+  "objective_representation": "risk",
+  "not_read": null
+ },
+ {
+  "cluster": "C4",
+  "ref": "arxiv:2606.20336",
+  "claims": [
+   {
+    "claim": "Priority-ordered STL specifications are already optimized inside standard MPPI: a rank-preserving reward sum_j(a*2^(N-j+1)*step(rho_j) + rho_j/N) encodes hard lexicographic ordering over STL rules, evaluated exactly per rollout with no differentiability requirement, under multimodal uncertainty handled by scenario trees plus CVaR over scenario losses.",
+    "grade": "E4",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "highway cut-in and unsignalized intersection, kinematic bicycle",
+    "where": "Secs. III-IV, Eqs. 8/12"
+   },
+   {
+    "claim": "The MPPI sample budget is only V=220-240 rollouts at 0.77-2.49 ms per planning step (CUDA-parallelized on RTX 5060; kinematic bicycle dynamics), i.e. logic-structured MPPI works at rollout counts comparable to the program's K<=256 - though with trivial dynamics, not full physics.",
+    "grade": "E4",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "220-240 rollouts, 0.77-2.49 ms/step, horizons 16-24 steps",
+    "setting": null,
+    "where": "Sec. V"
+   },
+   {
+    "claim": "Strict lexicographic MPPI preserved safety across all cut-in modes where a hand-tuned weighted-CVaR baseline sacrificed worst-case safety margin - a direct logic-vs-tuned-weights comparison in MPPI that parallels the in-repo FPL-vs-linear finding.",
+    "grade": "E4",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "Use Case A, 5 cut-in scenarios (p=0.02-0.55)",
+    "where": "Sec. V results"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "kinematic bicycle (autonomous car)"
+  ],
+  "objective_representation": "logic",
+  "not_read": null
+ },
+ {
+  "cluster": "C4",
+  "ref": "arxiv:2602.16825",
+  "claims": [
+   {
+    "claim": "RRT-eta independently adopts FPL: it maps AGM robustness intervals to bounded fulfillment values f_i=(eta_upper+eta_lower+2)/4 in [0,1] and composes them with FPL power means (p -> -inf conjunctive to p -> +inf disjunctive), explicitly citing FPL as enabling prioritization of less-fulfilled objectives, with aggregation weights taken from power-mean derivatives.",
+    "grade": "E4",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "sampling-based motion planning (offline RRT), not MPC",
+    "where": "Sec. IV, Eqs. 18/20"
+   },
+   {
+    "claim": "Incremental robustness monitoring reduces per-observation STL evaluation from O(|s|*|phi|) to O(|phi|), cutting spec-evaluation overhead from thousands to hundreds of operations per trajectory - directly transferable to keeping FPL atom evaluation cheap inside CPU MPPI rollouts.",
+    "grade": "E4",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "O(|s|) speedup; ~10x fewer ops for typical |s|=20-50",
+    "setting": null,
+    "where": "Sec. V complexity analysis"
+   },
+   {
+    "claim": "RRT-eta is an offline planner with no receding-horizon or MPC component, so FPL-composed costs inside sampling MPC remains unoccupied territory even after this adoption.",
+    "grade": "E4",
+    "bears_HA": "neutral",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": null,
+    "where": "whole paper"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "double integrator",
+   "unicycle",
+   "7-DOF KUKA arm"
+  ],
+  "objective_representation": "logic",
+  "not_read": null
+ },
+ {
+  "cluster": "C4",
+  "ref": "arxiv:2604.20428",
+  "claims": [
+   {
+    "claim": "Lexicographic priorities over conflicting STL specs are collapsed into one scalar by discretizing each violation metric into integer levels and bit-shifting: s(y)=sum c_i(y)*2^(B_i), with a proven equivalence between lexicographic order and scalar order; solved by their deterministic MPPI with the quadratic input-cost requirement eliminated (R(beta)=beta*lambda*Sigma^-1 -> 0) and a cosine annealing schedule.",
+    "grade": "E4",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "IEEE OJ-ITS (listed), CommonRoad driving benchmarks, CPU (Threadripper PRO 5975WX)",
+    "where": "Secs. III-IV"
+   },
+   {
+    "claim": "Discretization of violation metrics causes priority-order relaxation/inversion that only vanishes with finer granularity, and the paper surveys 11 STL robustness definitions with materially different planning outcomes - evidence that hard-lexicographic scalarizations are brittle to quantization, which FPL's soft priority offsets avoid by construction.",
+    "grade": "E4",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "11 robustness definitions compared",
+    "setting": null,
+    "where": "Secs. V-VI"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "scalar integrator",
+   "autonomous car (CommonRoad)"
+  ],
+  "objective_representation": "logic",
+  "not_read": null
+ },
+ {
+  "cluster": "C4",
+  "ref": "arxiv:1612.03471",
+  "claims": [
+   {
+    "claim": "TLTL robustness degree used directly as the RL reward (episode-based REPS) learns faster and reaches higher returns than hand-crafted discrete and continuous shaped rewards on 2D manipulation tasks, and achieves 100% success (10/10) on a physical Baxter toast-placing task in 80 iterations x 10 trajectories where the hand-crafted reward failed to learn gripper timing.",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "supports",
+    "quantitative": "100% vs failure; 800 total trajectories; 'considerable margin' on sequential-goal task where discrete reward failed entirely",
+    "setting": "IROS 2017 (arXiv 1612.03471); rllab/Gym sims + Baxter, 21D state 8D action",
+    "where": "Secs. V-VI"
+   },
+   {
+    "claim": "The authors flag that nested min/max robustness misdirects learning when sub-formulae have different physical scales and that normalization is manual - the precise documented pain point that bounded [0,1] fulfillment atoms with satisfied bands are designed to eliminate.",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "supports",
+    "quantitative": null,
+    "setting": null,
+    "where": "Sec. VII discussion"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "2D three-joint manipulator (sim)",
+   "Baxter (hardware)"
+  ],
+  "objective_representation": "logic",
+  "not_read": null
+ },
+ {
+  "cluster": "C4",
+  "ref": "arxiv:2405.10996",
+  "claims": [
+   {
+    "claim": "D-GMSR builds C1-smooth STL robustness from weighted geometric and power means (p>=1) over squared positive/negative parts, and is the only measure in their comparison that is simultaneously smooth, sound, complete, and free of locality/masking problems (vs D-SR, LSE, D-SSR, AGM) for any epsilon>0 rather than asymptotically.",
+    "grade": "E3",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "sequential convex programming (prox-linear, CVXPY/ECOS/MOSEK)",
+    "where": "Sec. 3, Table 1, Lemma 3.6"
+   },
+   {
+    "claim": "D-GMSR robustness values are unbounded and unnormalized, depending on raw predicate magnitudes - power-mean aggregation prior art exists here, but the bounded-[0,1]-atom normalization step remains FPL's distinguishing move.",
+    "grade": "E3",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": null,
+    "where": "Sec. 3 (no normalization stated)"
+   },
+   {
+    "claim": "LSE-smoothed robustness (D-SSR, kappa=25) fails to satisfy a simple reach specification due to masking while the mean-based measure converges - concrete evidence that mean-family aggregation is better-behaved than softmin/LSE for spec optimization.",
+    "grade": "E3",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "illustrative reach problem; quadrotor (21 nodes/20s); 6-DoF rocket landing with 14 state-triggered constraints",
+    "where": "Sec. 4.1"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "quadrotor point-mass",
+   "6-DoF rocket"
+  ],
+  "objective_representation": "logic",
+  "not_read": null
+ },
+ {
+  "cluster": "C4",
+  "ref": "arxiv:2011.04950",
+  "claims": [
+   {
+    "claim": "A learned neural dynamics model plus sampling MPC (CMA-ES) directly maximizing STL robustness over predicted trajectories solves Cartpole, Mountain Car, Fetch reach, adaptive cruise control, and parking without reward engineering - the closest existing pipeline shape to an FPL+MPPI teacher, but it has no policy student, no distillation, and no baseline comparisons.",
+    "grade": "E4",
+    "bears_HA": "supports",
+    "bears_HB": "supports",
+    "quantitative": "Cartpole 200.0 +/- 0 vanilla reward",
+    "setting": "learned model, receding horizon, first action executed",
+    "where": "Secs. III-V"
+   },
+   {
+    "claim": "No mechanism for sharing the spec between planner and a learned policy exists in this work, confirming (with the saturation notes) that an MPC teacher and RL student sharing one bounded-fulfillment spec as cost and reward is unoccupied.",
+    "grade": "E4",
+    "bears_HA": "neutral",
+    "bears_HB": "supports",
+    "quantitative": null,
+    "setting": null,
+    "where": "whole paper"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "Cartpole",
+   "Mountain Car",
+   "Fetch arm (sim)",
+   "highway ACC",
+   "parking"
+  ],
+  "objective_representation": "logic",
+  "not_read": null
+ },
+ {
+  "cluster": "C4",
+  "ref": "arxiv:2212.03323",
+  "claims": [
+   {
+    "claim": "A rule hierarchy of N STL rules is collapsed into one differentiable rank-preserving reward R(rho)=sum(a^(N-i+1)*step(rho_i)+rho_i/N), a>2, with Theorem 1 proving lower rank implies strictly higher reward; sigmoid-relaxed for gradient refinement via STLCG autodiff.",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "2 optimization problems per cycle vs worst-case 2^N; real-time up to N=6 rules",
+    "setting": "ICRA 2023 (NVIDIA); highway-gym, kinematic bicycle; Threadripper 3975WX + RTX 3090",
+    "where": "Secs. III-IV, Theorem 1"
+   },
+   {
+    "claim": "Two-stage planning (motion-primitive tree then Adam refinement, K=10 iterations) runs at 7-10 Hz (90-140 ms/cycle) and adapts across overtaking, obstacle, and stop-sign scenarios without scenario-specific hyperparameter retuning - hierarchy-as-reward transfers across scenarios the way the program hopes FPL transfers across morphologies.",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "0.091-0.105 s mean planning time across scenarios",
+    "setting": null,
+    "where": "Sec. VI"
+   },
+   {
+    "claim": "Rank preservation requires exponential weight separation a^(N-i+1), which for bounded rewards compresses lower-priority gradient signal exponentially in N - the failure mode FPL's soft priority offsets (delta in [-1,1], bounded output) are designed to avoid; this is the sharpest published competitor to argue against.",
+    "grade": "E3",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": null,
+    "where": "Eq. 5-6 analysis"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "kinematic bicycle (autonomous car)"
+  ],
+  "objective_representation": "logic",
+  "not_read": null
+ },
+ {
+  "cluster": "C5",
+  "ref": "arxiv:2503.05818",
+  "claims": [
+   {
+    "claim": "FPL composes bounded [0,1] fulfillment atoms via weighted power means (p interpolating min to max) with priority offsets delta in [-1,1] giving soft lexicographic ordering; demonstrated only with a policy-gradient learner (BPG, a DDPG extension), never in planning or MPC.",
+    "grade": "E4",
+    "bears_HA": "supports",
+    "bears_HB": "supports",
+    "quantitative": null,
+    "setting": "Gymnasium: Pendulum-v1, Reacher-v4, Hopper-v4, LunarLanderContinuous-v2",
+    "where": "Sections III-B, IV, V"
+   },
+   {
+    "claim": "FPL-specified BPG reaches reward thresholds far faster than baselines: LunarLander threshold in 20k steps vs 36k (CrossQ) and 128k (DDPG); up to 500% better sample efficiency than SAC.",
+    "grade": "E4",
+    "bears_HA": "neutral",
+    "bears_HB": "supports",
+    "quantitative": "84% fewer steps vs DDPG, 44% vs CrossQ on LunarLander; 59% reduction vs CrossQ on Hopper; up to 500% vs SAC",
+    "setting": "Gymnasium benchmarks, BPG vs DDPG/SAC/TQC/CrossQ",
+    "where": "Abstract; Section VI-A1"
+   },
+   {
+    "claim": "One FPL spec generalized across HalfCheetah-v4, Walker2d-v4, Ant-v4 without retuning, and behavior is robust to reasonable variation in power-mean parameters (p chosen as 0 or -1) and seeds, unlike linear weighted rewards.",
+    "grade": "E4",
+    "bears_HA": "supports",
+    "bears_HB": "supports",
+    "quantitative": "Hopper fulfillment 0.625 with FPL vs 0.194 without",
+    "setting": "MuJoCo locomotion suite",
+    "where": "Sections VI-D, VI-E"
+   },
+   {
+    "claim": "Acknowledged limitations: BPG has lower asymptotic performance and FPL exhibits sensitivity to Q-overestimation bias requiring an extra FQ-value hyperparameter.",
+    "grade": "E4",
+    "bears_HA": "neutral",
+    "bears_HB": "contradicts",
+    "quantitative": null,
+    "setting": "same",
+    "where": "Section VII"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "pendulum",
+   "reacher (2-link arm)",
+   "hopper",
+   "lunar lander",
+   "half-cheetah",
+   "walker2d",
+   "ant"
+  ],
+  "objective_representation": "logic",
+  "not_read": null
+ },
+ {
+  "cluster": "C5",
+  "ref": "arxiv:2503.01476",
+  "claims": [
+   {
+    "claim": "STL robustness can be used directly as a terminal cost in a deterministic path-integral (MPPI-style) optimizer via state augmentation, exploiting sampling's indifference to non-differentiable min/max costs instead of smoothing them; gradient methods (GRAD) violate specs or time out where PI succeeds.",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "Problem I: PI cost -2.98 with rho=0 satisfied in 0.024s vs GRAD rho=-2.5 (violated); Problem III: PI converges in 25.07s, CMA-ES 79.82s, MIP/GRAD/SGRAD time out at 3600s",
+    "setting": "C++ on AMD Ryzen 5 CPU; scalar integrator, 4D motion planning, 5D kinematic vehicle with 5 obstacles",
+    "where": "Eq. 7-12; Tables I-II"
+   },
+   {
+    "claim": "Sample requirements grow sharply with spec complexity: 955 samples for a 1D problem but 81,650 for the 5D vehicle with nested STL, far beyond a K<=256 real-time budget; runtime scales linearly with J*M*K.",
+    "grade": "E2",
+    "bears_HA": "contradicts",
+    "bears_HB": "neutral",
+    "quantitative": "M=81650 samples, 25.07s convergence on CPU for Problem III",
+    "setting": "same",
+    "where": "Table I; Section on runtime"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "point integrator",
+   "planar double integrator",
+   "kinematic car"
+  ],
+  "objective_representation": "logic",
+  "not_read": null
+ },
+ {
+  "cluster": "C5",
+  "ref": "arxiv:1903.05186",
+  "claims": [
+   {
+    "claim": "AGM robustness replaces min/max STL semantics with geometric means for conjunction and arithmetic means for disjunction over normalized [-1,1] signals, is sound (eta>0 iff traditional rho>0), and is smooth almost everywhere with informative gradients, unlike min/max which depends only on critical points.",
+    "grade": "E3",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "theory + gradient-ascent case studies",
+    "where": "Definition 2; Theorem 2; Property 1"
+   },
+   {
+    "claim": "Controllers synthesized by maximizing AGM robustness are more robust to disturbance than those maximizing smooth-approximated traditional robustness: failure rate 41% vs 58% under Gaussian control noise.",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "17 percentage-point failure reduction over 100 Monte Carlo trials",
+    "setting": "linear integrator with post-synthesis Gaussian disturbance",
+    "where": "Problem 3, Section V"
+   },
+   {
+    "claim": "Mean-like aggregation changes optimal behavior qualitatively: trajectories satisfy subgoals earlier and for longer (frequency of satisfaction rewarded), not just at single critical instants.",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "AGM visits Reg1 at t=3,4 vs t=4 only; Reg3 at t=8,9,10 vs t=10 only",
+    "setting": "nonholonomic robot and nonlinear path planning, T=10-15",
+    "where": "Problems 1-2"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "nonholonomic unicycle",
+   "planar integrator"
+  ],
+  "objective_representation": "logic",
+  "not_read": null
+ },
+ {
+  "cluster": "C5",
+  "ref": "arxiv:2012.06656",
+  "claims": [
+   {
+    "claim": "Multiplicative (geometric-mean) composition of normalized bounded reward components, acting as a logical AND, replaced additive scalarization and took sim-to-real transfer from ~1 flight-worthy agent in dozens (Neuroflight) to 100% of trained agents flight-worthy on a real racing quadrotor.",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "supports",
+    "quantitative": "100% flight-worthy vs 1-of-dozens; motor current 5.86+/-3.10 A vs 22.87 A; tracking MAE 4.20 deg/s vs 5.19 (Neuroflight) and 5.01 (PID); oscillation 330Hz -> ~130Hz",
+    "setting": "GymFC/Gazebo sim + real NF1 quadrotor, NN at 730Hz on Cortex-M4",
+    "where": "Sections 4.1-4.2, 5.2, 6; Table 1"
+   },
+   {
+    "claim": "Across OpenAI Gym benchmarks, multiplicative composition reduced training variance in 19 of 24 comparisons (13 with >50% reduction) vs additive composition, supporting reproducibility claims for bounded conjunctive rewards.",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "supports",
+    "quantitative": "19/24 lower variance, 13/24 with >50% reduction",
+    "setting": "Gym benchmark sweep, multiple seeds",
+    "where": "Section 5.4"
+   },
+   {
+    "claim": "Composition interacts with the learner: SAC fails to train at all on the multiplicative reward on Ant, showing the reward structure is not algorithm-agnostic.",
+    "grade": "E2",
+    "bears_HA": "neutral",
+    "bears_HB": "contradicts",
+    "quantitative": null,
+    "setting": "Gym Ant with SAC",
+    "where": "Section 5.4.1"
+   }
+  ],
+  "cpu_feasible": null,
+  "morphologies": [
+   "quadrotor (sim + real)",
+   "Gym benchmark suite"
+  ],
+  "objective_representation": "other",
+  "not_read": null
+ },
+ {
+  "cluster": "C5",
+  "ref": "arxiv:2602.16825",
+  "claims": [
+   {
+    "claim": "RRT-eta explicitly cites and adopts FPL's power-mean composition (fulfillment values f in [0,1], derivative-based weights) to steer sampling-based STL planning, valuing FPL's minimum-fulfillment guarantee that prevents neglect of less-satisfied subformulae - independent confirmation that FPL-style composition transplants into sampling-based synthesis.",
+    "grade": "E4",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "double-integrator, unicycle, 7-DOF manipulator",
+    "where": "Introduction; Section V-C2, Eq. 20"
+   },
+   {
+    "claim": "AGM interval semantics over partial trajectories give incremental monitoring at O(|s||phi|) vs O(|s|^2|phi|), and the AGM landscape is 'significantly smoother than traditional min-max robustness' though still non-convex.",
+    "grade": "E4",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "linear O(|s|) speedup; hundreds vs thousands of ops per trajectory for |s|=20-50, |phi|=10-20",
+    "setting": "complexity analysis + planning case studies",
+    "where": "Section IV-B; Problem III.1"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "point robot",
+   "unicycle",
+   "7-DOF manipulator"
+  ],
+  "objective_representation": "logic",
+  "not_read": null
+ },
+ {
+  "cluster": "C5",
+  "ref": "arxiv:2103.09568",
+  "claims": [
+   {
+    "claim": "For nonlinear utility functions the Bellman equation does not decompose (utility does not distribute over immediate plus future returns), and SER (utility of expected return) vs ESR (expected utility of return) yield significantly different optimal policies - directly relevant because MPPI applies the FPL utility per-rollout (ESR-like) while a critic-based RL student estimates expectations (SER-like).",
+    "grade": "E3",
+    "bears_HA": "neutral",
+    "bears_HB": "contradicts",
+    "quantitative": null,
+    "setting": "analytic MORL taxonomy",
+    "where": "Section 5.3, Eqs. 11-13"
+   },
+   {
+    "claim": "Linear scalarization cannot express many human preferences and puts trade-off authority with engineers via semi-blind weight tuning; monotonically increasing nonlinear utilities retain Pareto-consistency while expressing richer preferences, and non-stationary policies can Pareto-dominate stationary ones under nonlinear utility.",
+    "grade": "E3",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "survey/position with worked examples",
+    "where": "Sections 1, 5.2.2-5.2.3"
+   }
+  ],
+  "cpu_feasible": null,
+  "morphologies": [],
+  "objective_representation": "linear",
+  "not_read": null
+ },
+ {
+  "cluster": "C5",
+  "ref": "arxiv:2002.06100",
+  "claims": [
+   {
+    "claim": "Godel/min conjunction and minimum aggregation are 'single-passing': at most one input receives nonzero derivative, so min-like conjunctions starve all but one subobjective of learning signal; Lukasiewicz aggregation has nonvanishing derivative on only 1/n! of the domain.",
+    "grade": "E3",
+    "bears_HA": "supports",
+    "bears_HB": "supports",
+    "quantitative": "nonvanishing fraction 1/n! (Lukasiewicz), 1/2^(n-1) (nilpotent)",
+    "setting": "analytic study of differentiable fuzzy operators + semi-supervised toy experiments",
+    "where": "Definition 5; Sections 5, 6.2"
+   },
+   {
+    "claim": "Product/geometric-mean-family operators (product t-norm, log-product, generalized-mean aggregators) have nonvanishing gradients everywhere and are recommended for learning; best learning performance requires operator combinations that no longer satisfy classical logical laws - independent theoretical support for FPL's empirical choice of p=0/-1 over p->-inf, and a mechanism for why hard min-like conjunctions degrade both gradient learners and rank-based samplers.",
+    "grade": "E3",
+    "bears_HA": "supports",
+    "bears_HB": "supports",
+    "quantitative": "Godel operators find global optimum in only 88.8% of initializations; Lukasiewicz ~83.5%",
+    "setting": "same",
+    "where": "Sections 6.4, 6.7, 10; Abstract"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [],
+  "objective_representation": "logic",
+  "not_read": null
+ },
+ {
+  "cluster": "C5",
+  "ref": "arxiv:1612.03471",
+  "claims": [
+   {
+    "claim": "TLTL robustness degree used directly as RL reward beats hand-crafted discrete and continuous shaped rewards: 100% success on a real Baxter toast-placing task where the hand-tuned continuous reward fails to learn at all; failure of the hand-tuned reward is attributed to brittleness of relative coefficient magnitudes - the scale-sensitivity FPL's normalization removes.",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "supports",
+    "quantitative": "100% success (TLTL) vs failure (shaped) on Baxter; 21D state, 8D action",
+    "setting": "episode-based REPS, 2D sim manipulator + real Baxter",
+    "where": "Section V-B; Figure 3"
+   },
+   {
+    "claim": "Encoding temporal task structure in the reward lets a flat, non-hierarchical RL algorithm learn hierarchical sequential tasks, but predicate robustness normalization had to be done manually - unnormalized logic rewards remain scale-susceptible.",
+    "grade": "E2",
+    "bears_HA": "neutral",
+    "bears_HB": "supports",
+    "quantitative": null,
+    "setting": "sequential goal-visiting sim task",
+    "where": "Sections V-A, V-B (limitations)"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "3-joint planar manipulator (sim)",
+   "Baxter (real)"
+  ],
+  "objective_representation": "logic",
+  "not_read": null
+ },
+ {
+  "cluster": "C5",
+  "ref": "arxiv:2005.07513",
+  "claims": [
+   {
+    "claim": "Linear reward-weight scalarization is not scale-invariant: multiplying one objective's rewards 20x silently reorders learned preferences, while MO-MPO's per-objective KL constraints (epsilon_k) yield identical policies under rescaling because temperatures eta_k absorb the scale factor.",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "humanoid-run with 10x penalty scaling: MO-MPO hypervolume 6.9e7 vs scalarized MPO 2.6e7",
+    "setting": "Simple World bandit, Deep Sea Treasure, humanoid run (21 DoF), Shadow Hand, humanoid mocap (56 DoF), real Sawyer peg-in-hole",
+    "where": "Abstract; Section 5.1; Table 1"
+   },
+   {
+    "claim": "Scale-invariant preference encoding requires per-objective machinery (one critic and temperature per objective) and tracing preferences requires many runs over epsilon settings - a heavier mechanism than FPL's static [0,1] normalization achieving the same invariance goal.",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "same",
+    "where": "Section 7 (limitations)"
+   }
+  ],
+  "cpu_feasible": null,
+  "morphologies": [
+   "humanoid (21 and 56 DoF)",
+   "Shadow Hand",
+   "Sawyer arm (real)"
+  ],
+  "objective_representation": "constrained",
+  "not_read": null
+ },
+ {
+  "cluster": "C5",
+  "ref": "Policy Invariance Under Reward Transformations: Theory and Application to Reward Shaping",
+  "claims": [
+   {
+    "claim": "F(s,a,s')=gamma*Phi(s')-Phi(s) (potential-based shaping) is both sufficient and, absent further MDP knowledge, necessary for preserving optimal policies; any non-potential-based transformation admits an MDP where every optimal policy of the shaped problem is suboptimal in the original - hence FPL's bounded nonlinear composition necessarily changes optima (it is intent specification, not shaping) and forfeits the classical invariance guarantee.",
+    "grade": "E3",
+    "bears_HA": "neutral",
+    "bears_HB": "contradicts",
+    "quantitative": null,
+    "setting": "finite MDP theory; Theorem 1 with necessity proof in Appendix A",
+    "where": "Theorem 1; Section 3; Appendix A"
+   },
+   {
+    "claim": "Non-potential shaping produces positive-reward cycles and degenerate behavior (bicycle agent riding in circles, soccer robot 'vibrating' on the ball) - the founding catalogue of reward-hacking failure modes that bounded satisfied-band atoms are designed to cap.",
+    "grade": "E3",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "cited case studies + 10x10/50x50 gridworld and subgoal experiments (40 runs)",
+    "where": "Sections 1, 3, 4; Figures 1-2"
+   },
+   {
+    "claim": "Potential-based shaping with even a crude distance heuristic (Phi=0.5*Phi0) dramatically speeds learning, and near-optimal policies are preserved (robustness identity holds for arbitrary policies, not just optima).",
+    "grade": "E1",
+    "bears_HA": "neutral",
+    "bears_HB": "supports",
+    "quantitative": "50x50 gridworld: unshaped learning 'clearly losing hopelessly'; shaped curves near-optimal within tens of trials",
+    "setting": "Sarsa gridworlds; result replicated community-wide over 25 years",
+    "where": "Section 4; Remark 1; Corollary 2"
+   }
+  ],
+  "cpu_feasible": null,
+  "morphologies": [
+   "gridworld"
+  ],
+  "objective_representation": "other",
+  "not_read": null
+ },
+ {
+  "cluster": "C5",
+  "ref": "arxiv:2010.03950",
+  "claims": [
+   {
+    "claim": "Exposing reward function structure (as a finite-state reward machine) to the learner, via counterfactual experiences (CRM) or decomposition (HRM), converts sparse-reward tasks from unlearnable to solvable: in Craft World, plain Q-learning stays near 0 average reward after 2M steps ('hopeless') while CRM/HRM saturate near optimal by ~1M steps; on HalfCheetah lap-running, DDPG stays flat while CRM completes 9 laps and HRM ~6.",
+    "grade": "E2",
+    "bears_HA": "neutral",
+    "bears_HB": "supports",
+    "quantitative": "CRM ~8 avg reward/step vs DDPG ~0 (HalfCheetah task 1, 20 runs); QL flat at 2M steps in Craft World",
+    "setting": "office gridworld, Minecraft-like Craft World (10 maps x 6 trials), continuous Water World (DDQN), HalfCheetah-v3 (DDPG)",
+    "where": "Sections 5.1-5.3; Figures 5, 7, 10"
+   },
+   {
+    "claim": "Structure exploitation is not uniformly benign: automated reward shaping derived from the RM helped CRM and Q-learning but decreased performance of all approaches in Water World and did not help HRM; HRM learns fast but often converges to suboptimal policies.",
+    "grade": "E2",
+    "bears_HA": "neutral",
+    "bears_HB": "contradicts",
+    "quantitative": null,
+    "setting": "same",
+    "where": "Sections 5.1-5.2"
+   },
+   {
+    "claim": "Reward machines have regular-language expressivity (loops, sequences, conditionals, non-Markovian temporally extended rewards) that a flat memoryless atom composition like FPL cannot express without added automaton state.",
+    "grade": "E3",
+    "bears_HA": "neutral",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "formal expressivity discussion",
+    "where": "Abstract; Section 1"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "gridworlds",
+   "Water World (continuous)",
+   "half-cheetah"
+  ],
+  "objective_representation": "logic",
+  "not_read": null
+ },
+ {
+  "cluster": "C5",
+  "ref": "arxiv:2212.13769",
+  "claims": [
+   {
+    "claim": "Value-based lexicographic RL converges only if the slack tolerance tau is smaller than the minimum Q-value gap, which 'can in general not be determined a priori' - hard lexicographic ordering is intrinsically fragile to tolerance tuning, consonant with the repo's finding that hard lexicographic shields underperform soft priority offsets.",
+    "grade": "E3",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "Theorem 1 condition: 0 < tau < min |q_i(s,a)-q_i(s,a')|",
+    "setting": "theory + random MOMDPs (256/512 states)",
+    "where": "Theorem 1, Condition 5; Section 1.1"
+   },
+   {
+    "claim": "Lexicographic objectives let users specify safety-first preferences without pre-knowing attainable safety levels (unlike constrained RL thresholds), and lexicographic PPO/A2C obtain the most reward on GridNav while lexicographic DQN is safest; safety holds only for the limit policy, not during learning.",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "supports",
+    "quantitative": "learning time grows sub-linearly in number of reward functions",
+    "setting": "CartSafe, GridNav, IntersectionEnv vs RCPO/AproPO/DQN/A2C",
+    "where": "Sections 4.1-4.2; Figures 1-2"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "cart-pole variant",
+   "gridworld",
+   "autonomous-driving sim"
+  ],
+  "objective_representation": "constrained",
+  "not_read": null
+ },
+ {
+  "cluster": "C6",
+  "ref": "arxiv:2409.15610",
+  "not_read": null,
+  "cpu_feasible": false,
+  "morphologies": [
+   "Unitree Go2 quadruped (torque-level, 12 actuated DoF)",
+   "Unitree H1 humanoid (sim)"
+  ],
+  "objective_representation": "linear",
+  "claims": [
+   {
+    "claim": "Fixed-covariance MPPI (both explore- and exploit-tuned) largely fails on full-order torque-level agile quadruped tasks: crate-climb success 0.2-0.3 and walk-tracking error ~8-10x worse than the annealed variant.",
+    "grade": "E2",
+    "where": "Sec. V, results table",
+    "setting": "Brax/JAX sim, Unitree Go2 full-order dynamics",
+    "quantitative": "MPPI success 0.2-0.3 vs DIAL-MPC 0.9; tracking error 0.190-0.230 vs 0.024",
+    "bears_HA": "contradicts",
+    "bears_HB": "neutral"
+   },
+   {
+    "claim": "Training-free sampling MPC with dual (iteration-level and action-level) covariance annealing beats a trained goal-conditioned RL policy on hard climbing without any learning, and cuts tracking error 13.4x vs vanilla MPPI.",
+    "grade": "E2",
+    "where": "Abstract; Sec. V tables",
+    "setting": "sim + real Go2 jumping with payload",
+    "quantitative": "13.4x lower tracking error vs MPPI; climb success 0.9 vs 0.6 (RL); 50% better than RL",
+    "bears_HA": "supports",
+    "bears_HB": "neutral"
+   },
+   {
+    "claim": "The method needs 2048 parallel GPU rollouts (RTX 4090, JAX/Brax) at 50 Hz with N=20 annealing iterations, far above a CPU K<=256 budget.",
+    "grade": "E2",
+    "where": "Sec. V implementation details",
+    "setting": "RTX 4090 + i9-13900KF",
+    "quantitative": "2048 samples/iter, N=20 iters, H=20-40, 50 Hz",
+    "bears_HA": "contradicts",
+    "bears_HB": "neutral"
+   }
+  ]
+ },
+ {
+  "cluster": "C6",
+  "ref": "arxiv:1811.01848",
+  "not_read": null,
+  "cpu_feasible": true,
+  "morphologies": [
+   "27-DoF torque-actuated humanoid (sim)",
+   "five-fingered dexterous hand + cube (sim)",
+   "2D point mass"
+  ],
+  "objective_representation": "linear + learned terminal value",
+  "claims": [
+   {
+    "claim": "MPPI with a learned terminal value function trained by N-step trajectory-optimization targets on the SAME reward the planner optimizes solves humanoid getup in 96 seconds of agent experience vs ~5 days for prior work, and in-hand manipulation in 1 CPU-hour vs a 500-CPU-hour baseline.",
+    "grade": "E2",
+    "where": "Sec. 5 experiments",
+    "setting": "MuJoCo-class sim, MPPI 120 rollouts (humanoid) / 80 (hand)",
+    "quantitative": "96 s vs 5 days experience; 1 vs 500 CPU-hours",
+    "bears_HA": "supports",
+    "bears_HB": "supports"
+   },
+   {
+    "claim": "A learned value function lets the MPC horizon shrink 8x (H=8 matches pure-MPC H=64 performance), directly reducing per-step rollout compute.",
+    "grade": "E2",
+    "where": "Sec. 5, horizon ablation",
+    "setting": "humanoid sim",
+    "quantitative": "H=8 with value ~ H=64 without",
+    "bears_HA": "supports",
+    "bears_HB": "supports"
+   },
+   {
+    "claim": "The whole loop runs at MPPI rollout counts of 80-120, i.e. within a CPU K<=256 budget, using ground-truth dynamics as internal model (accuracy assumed; model error unaddressed).",
+    "grade": "E2",
+    "where": "Sec. 5 hyperparameters; Sec. 6 limitations",
+    "setting": "sim only",
+    "quantitative": "80-120 MPPI rollouts",
+    "bears_HA": "supports",
+    "bears_HB": "neutral"
+   }
+  ]
+ },
+ {
+  "cluster": "C6",
+  "ref": "arxiv:2310.16828",
+  "not_read": null,
+  "cpu_feasible": false,
+  "morphologies": [
+   "DMControl (Humanoid 21D, Dog 38D, etc.)",
+   "Meta-World manipulation",
+   "ManiSkill2",
+   "MyoSuite"
+  ],
+  "objective_representation": "learned",
+  "claims": [
+   {
+    "claim": "Planner and policy prior optimize the same learned Q-function: the policy prior (max-entropy RL on Q) seeds a fraction of MPPI sample sequences and planning is warm-started from the shifted previous solution; the planner bootstraps returns with the same Q.",
+    "grade": "E2",
+    "where": "Sec. 3 method",
+    "setting": "latent world model, 104 online RL tasks",
+    "quantitative": null,
+    "bears_HA": "neutral",
+    "bears_HB": "supports"
+   },
+   {
+    "claim": "One agent with one hyperparameter set (except batch size) controls 80 tasks across multiple embodiments and action spaces (up to 38D), normalized score 70.6 at 317M params vs 16.0 at 1M \u2014 evidence that a single planner+value architecture can be morphology-general.",
+    "grade": "E2",
+    "where": "Sec. 4, multitask results",
+    "setting": "80-task multitask (50 Meta-World + 30 DMControl)",
+    "quantitative": "score 70.6 (317M) vs 16.0 (1M); 80 tasks, single hyperparameter set",
+    "bears_HA": "supports",
+    "bears_HB": "supports"
+   },
+   {
+    "claim": "Compute is far outside the program stack: MPPI over the latent model uses 512 samples x 6-8 iterations per step, and the 80-task agent took 33 GPU-days on an RTX 3090.",
+    "grade": "E2",
+    "where": "Appendix, implementation",
+    "setting": "GPU training",
+    "quantitative": "512 samples x 6-8 iters; 33 GPU-days",
+    "bears_HA": "contradicts",
+    "bears_HB": "neutral"
+   }
+  ]
+ },
+ {
+  "cluster": "C6",
+  "ref": "arxiv:2203.04955",
+  "not_read": null,
+  "cpu_feasible": false,
+  "morphologies": [
+   "DMControl Humanoid (21D) and Dog (38D)",
+   "Meta-World manipulation",
+   "image-based DMControl"
+  ],
+  "objective_representation": "learned",
+  "claims": [
+   {
+    "claim": "The pressure-point coupling: policy pi contributes ~5% of the 512 planner samples, is trained to maximize the same Q-function the planner uses as terminal value, and model+value+policy are learned jointly by TD \u2014 planner and policy optimize one shared objective. This design is independently replicated (TD-MPC2, BMPC, POLO variants) across groups.",
+    "grade": "E1",
+    "where": "Sec. 3-4; Appendix hyperparameters",
+    "setting": "latent world model, DMControl/Meta-World",
+    "quantitative": "N=512 samples + ~5% policy samples, H=5, 6-12 iterations",
+    "bears_HA": "neutral",
+    "bears_HB": "supports"
+   },
+   {
+    "claim": "Solves Humanoid and Dog locomotion (up to 38D actions) in as little as ~1M env steps and solves Walker Walk 16x faster wall-clock than LOOP at 3.3x less compute \u2014 planner+shared-value coupling delivers large sample-efficiency gains over model-free and prior hybrid baselines.",
+    "grade": "E2",
+    "where": "Sec. 5, Fig. 4-6",
+    "setting": "state-based DMControl",
+    "quantitative": "~1M steps for Humanoid/Dog; 16x wall-clock vs LOOP; 3.3x less compute vs SAC per 500k steps",
+    "bears_HA": "neutral",
+    "bears_HB": "supports"
+   },
+   {
+    "claim": "The learned policy alone remains inferior to planning on complex tasks (though 6x faster at inference) \u2014 distillation into the policy does not close the gap to the planner in this architecture.",
+    "grade": "E2",
+    "where": "Sec. 5 ablations",
+    "setting": "DMControl",
+    "quantitative": "policy-only 6x faster inference but lower return",
+    "bears_HA": "neutral",
+    "bears_HB": "supports"
+   }
+  ]
+ },
+ {
+  "cluster": "C6",
+  "ref": "arxiv:1909.05197",
+  "not_read": null,
+  "cpu_feasible": true,
+  "morphologies": [
+   "ANYmal quadruped (hardware + sim, 24 states/inputs)"
+  ],
+  "objective_representation": "constrained",
+  "claims": [
+   {
+    "claim": "Training the student by minimizing the MPC-derived control Hamiltonian H(x,u,t)=L(x,u,t)+dV/dx f(x,u,t) \u2014 which embeds the teacher's cost and constraints \u2014 yields stable ANYmal gaits from under 10 minutes of MPC demonstration data and lower constraint violation than behavioral cloning at similar convergence speed.",
+    "grade": "E2",
+    "where": "Sec. III (Lemma 1); Sec. V results",
+    "setting": "ANYmal sim + hardware, mixture-of-experts policy",
+    "quantitative": "<10 min MPC demos; consistently lower constraint violation than BC",
+    "bears_HA": "neutral",
+    "bears_HB": "supports"
+   },
+   {
+    "claim": "Pure distillation is capped by the teacher: 'our method cannot outperform the MPC policy' and inherits the MPC's local minima, with no exploration mechanism \u2014 the structural argument for adding RL fine-tuning after imitation.",
+    "grade": "E2",
+    "where": "Sec. VI discussion",
+    "setting": "ANYmal",
+    "quantitative": null,
+    "bears_HA": "neutral",
+    "bears_HB": "supports"
+   },
+   {
+    "claim": "Distilled policies run 1-2+ orders of magnitude faster than online MPC (0.125 ms vs 38 ms here; 15x in IFM; MPC 400 Hz->40 Hz deployment in Reske) \u2014 replicated across independent groups and platforms, this is the standard amortization payoff of MPC-as-teacher.",
+    "grade": "E1",
+    "where": "Sec. V (timing)",
+    "setting": "ANYmal onboard compute; replicated on Mini Cheetah (IFM)",
+    "quantitative": "~300x (0.125 ms vs 38 ms); 15x in IFM",
+    "bears_HA": "neutral",
+    "bears_HB": "supports"
+   }
+  ]
+ },
+ {
+  "cluster": "C6",
+  "ref": "arxiv:2311.02304",
+  "not_read": null,
+  "cpu_feasible": true,
+  "morphologies": [
+   "Mini Cheetah quadruped (RaiSim sim + hardware)"
+  ],
+  "objective_representation": "linear",
+  "claims": [
+   {
+    "claim": "The exact H-B pipeline shape (DAgger-imitate a DDP-based MPC expert, then PPO fine-tune) converges in about half the iterations of RL from scratch (~2000 vs ~4000 PPO iterations) while using a minimally constructed reward.",
+    "grade": "E2",
+    "where": "Sec. IV/V, learning curves",
+    "setting": "RaiSim, 100 Hz control, flat-terrain pretraining",
+    "quantitative": "~2000 vs ~4000 iterations to convergence (~2x)",
+    "bears_HA": "neutral",
+    "bears_HB": "supports"
+   },
+   {
+    "claim": "The fine-tuning reward is NOT the MPC's cost: RL uses a separate simple velocity-tracking + regularization (+ optional contact) reward, i.e. teacher objective and student reward are only loosely coupled \u2014 no prior work in this pipeline shares a single spec between planner and RL reward.",
+    "grade": "E2",
+    "where": "Sec. III (reward definitions)",
+    "setting": "Mini Cheetah",
+    "quantitative": "SR/CR rewards ~3-4 terms vs 'ten terms' typical for vanilla RL",
+    "bears_HA": "neutral",
+    "bears_HB": "neutral"
+   },
+   {
+    "claim": "The fine-tuned student surpasses its own MPC teacher on robustness: 90% hardware success on 7.5 cm steps vs 0% for MPC and DAgger-only and 60% for vanilla RL, and tracks on slippery terrain where MPC fails outright \u2014 pure model-based MPC is not robust to unmodeled terrain contact.",
+    "grade": "E2",
+    "where": "Sec. V, hardware experiments table",
+    "setting": "Mini Cheetah hardware, steps/slippery/conveyor terrains",
+    "quantitative": "90% vs 0% (MPC/DAgger) vs 60% (RL) on 7.5 cm step; slip tracking err 0.189 vs 0.655 (RL), MPC failed; symmetry PPI 1.798 vs 10.13 (RL)",
+    "bears_HA": "contradicts",
+    "bears_HB": "supports"
+   }
+  ]
+ },
+ {
+  "cluster": "C6",
+  "ref": "arxiv:2103.14331",
+  "not_read": null,
+  "cpu_feasible": true,
+  "morphologies": [
+   "ANYmal quadruped (hardware + sim)"
+  ],
+  "objective_representation": "constrained",
+  "claims": [
+   {
+    "claim": "Mixture-of-experts MPC-Net with a log-partitioned Hamiltonian loss distills multiple ANYmal gaits (trot + static walk) into a single policy at performance similar to single-gait policies, with experts specializing per hybrid contact mode.",
+    "grade": "E2",
+    "where": "Sec. III-IV; multi-gait results",
+    "setting": "ANYmal, kinodynamic MPC teacher (OCS2)",
+    "quantitative": "multi-gait needs 200k vs 100k training iterations for single-gait",
+    "bears_HA": "neutral",
+    "bears_HB": "supports"
+   },
+   {
+    "claim": "Hamiltonian-loss policies are markedly more robust than behavioral-cloning policies trained on the same MPC data: 10.6+/-6.3 s survival on rough terrain vs 2.6+/-1.6 s for BC \u2014 how the teacher's objective enters the student loss matters, not just the data.",
+    "grade": "E2",
+    "where": "Sec. V robustness experiments",
+    "setting": "rough-terrain sim (z-scale 8.0)",
+    "quantitative": "10.6 s vs 2.6 s survival (~4x)",
+    "bears_HA": "neutral",
+    "bears_HB": "supports"
+   }
+  ]
+ },
+ {
+  "cluster": "C6",
+  "ref": "arxiv:1504.00702",
+  "not_read": null,
+  "cpu_feasible": true,
+  "morphologies": [
+   "PR2 7-DoF manipulator (real hardware, vision-based)"
+  ],
+  "objective_representation": "linear",
+  "claims": [
+   {
+    "claim": "Canonical cost-sharing-by-construction: iLQG teacher controllers and the CNN student are cast as one constrained optimization (BADMM with KL constraints enforcing p(u|x)=pi_theta(u|o)), so teacher and student provably optimize the same task cost \u2014 the strongest existing form of teacher-student objective coupling.",
+    "grade": "E2",
+    "where": "Sec. 4-5 (BADMM formulation)",
+    "setting": "guided policy search, real PR2",
+    "quantitative": null,
+    "bears_HA": "neutral",
+    "bears_HB": "supports"
+   },
+   {
+    "claim": "Shared-cost coupling yields extreme real-robot sample efficiency: complete visuomotor skills from 156-288 trials (~15 min robot execution within 3-4 h total), 88.9-96.3% success vs 0-70.4% for pose-estimation baselines.",
+    "grade": "E2",
+    "where": "Sec. 7, Fig. 9",
+    "setting": "hanger/shape-cube/hammer/bottle-cap tasks",
+    "quantitative": "156-288 trials; 88.9-96.3% vs 0-70.4% success",
+    "bears_HA": "neutral",
+    "bears_HB": "supports"
+   },
+   {
+    "claim": "Requires full state observability at training time (instrumented setup) and quadratic-cost teachers \u2014 the shared cost is a smooth linear/quadratic objective, not a logic or satisfaction spec.",
+    "grade": "E2",
+    "where": "Sec. 8 limitations",
+    "setting": "PR2",
+    "quantitative": null,
+    "bears_HA": "neutral",
+    "bears_HB": "neutral"
+   }
+  ]
+ },
+ {
+  "cluster": "C6",
+  "ref": "arxiv:2503.18871",
+  "not_read": null,
+  "cpu_feasible": false,
+  "morphologies": [
+   "DMControl (28 tasks)",
+   "HumanoidBench (14 tasks, up to 61D actions)"
+  ],
+  "objective_representation": "learned",
+  "claims": [
+   {
+    "claim": "Tightest mutual teacher-student loop found: the policy imitates an MPC expert that is itself guided by the policy (policy-seeded MPPI), with an on-policy n-step TD state-value learned jointly; expert imitation replaces TD-MPC2's value-gradient policy update.",
+    "grade": "E2",
+    "where": "Sec. 3 method; lazy-reanalyze mechanism",
+    "setting": "ICLR 2025, latent world model, batched GPU MPPI",
+    "quantitative": "lazy reanalyze cuts reanalysis from 99% to 0.8% of samples at 10-20% overhead",
+    "bears_HA": "neutral",
+    "bears_HB": "supports"
+   },
+   {
+    "claim": "Policy-guided-expert imitation gives ~3-4x better data efficiency than TD-MPC2 on 7 high-dimensional locomotion tasks (90k vs 360k steps-to-solve) with a smaller network (3M vs 5M params), and the distilled network policy alone reaches near-MPC performance, closing the distillation gap TD-MPC2 leaves open.",
+    "grade": "E2",
+    "where": "Sec. 4 results",
+    "setting": "HumanoidBench + DMControl high-dim tasks",
+    "quantitative": "90k vs 360k steps-to-solve (~4x); near-zero policy-vs-planner gap",
+    "bears_HA": "neutral",
+    "bears_HB": "supports"
+   }
+  ]
+ },
+ {
+  "cluster": "C6",
+  "ref": "arxiv:2502.20476",
+  "not_read": null,
+  "cpu_feasible": null,
+  "morphologies": [],
+  "objective_representation": "other",
+  "claims": [
+   {
+    "claim": "MPPI, policy-gradient RL, and diffusion sampling are unified as gradient ascent on a Gibbs measure over one energy E(U) = -J(U) = R(U) = log p(U) \u2014 a theoretical bridge for an MPPI teacher and RL student optimizing 'the same' objective.",
+    "grade": "E4",
+    "where": "Secs. 2-4 (theory)",
+    "setting": "theory only, no experiments",
+    "quantitative": null,
+    "bears_HA": "neutral",
+    "bears_HB": "supports"
+   },
+   {
+    "claim": "The equivalence is exact only under an exponential transform: policy gradient must optimize E[exp(R)] (not E[R]) to match MPPI's update \u2014 so an RL student trained on a raw FPL fulfillment reward does NOT optimize the identical objective as an MPPI teacher softmaxing exp(-S) with S=-log(u), unless the reward is transformed consistently.",
+    "grade": "E4",
+    "where": "PG-to-MPPI reduction section",
+    "setting": "theory only",
+    "quantitative": null,
+    "bears_HA": "neutral",
+    "bears_HB": "contradicts"
+   }
+  ]
+ },
+ {
+  "cluster": "C6",
+  "ref": "arxiv:2606.26392",
+  "not_read": null,
+  "cpu_feasible": true,
+  "morphologies": [
+   "DMControl 2D walker",
+   "Unitree Go2 quadruped (MuJoCo sim + hardware)",
+   "3-legged half-cheetah"
+  ],
+  "objective_representation": "linear",
+  "claims": [
+   {
+    "claim": "Injecting MPC transitions into the off-policy replay buffer at a fixed ~25% ratio, with the RL task reward completely unchanged and no imitation loss, steers RL into the controller's behavior basin: upright walking instead of scooting (walker) and structured trot instead of chaotic vibration (Go2) under an identical sparse velocity-tracking reward.",
+    "grade": "E4",
+    "where": "Secs. 3-5",
+    "setting": "2026 preprint; MuJoCo sim + Go2 hardware",
+    "quantitative": "25% injection ratio; gait quality 'comparable to reward shaping with twenty-one tuned terms' and to AMP, with better perturbation robustness than AMP",
+    "bears_HA": "neutral",
+    "bears_HB": "supports"
+   },
+   {
+    "claim": "No steps-to-threshold convergence speedup is reported \u2014 the benefit claimed is basin/gait selection and reward-engineering reduction, not sample efficiency; late-training basin drift is acknowledged.",
+    "grade": "E4",
+    "where": "Sec. 5-6 limitations",
+    "setting": "velocity-tracking tasks only",
+    "quantitative": null,
+    "bears_HA": "neutral",
+    "bears_HB": "neutral"
+   }
+  ]
+ },
+ {
+  "cluster": "C6",
+  "ref": "arxiv:1603.00622",
+  "not_read": null,
+  "cpu_feasible": true,
+  "morphologies": [
+   "simulated quadrotor (canyon/forest navigation, 40D laser or 110D image observations)"
+  ],
+  "objective_representation": "linear",
+  "claims": [
+   {
+    "claim": "An adaptive MPC teacher that optimizes its own task cost PLUS lambda*KL(teacher || student) anticipates the learner's distribution while never executing the student during training, giving safer and faster learning than DAgger: under one crash per iteration vs substantial failures for DAgger/coaching, with equal or better final policies.",
+    "grade": "E2",
+    "where": "Secs. 3-5",
+    "setting": "simulated quadrotor, MPC always in control during training",
+    "quantitative": "<1 crash/iteration vs 'substantial' failures for DAgger",
+    "bears_HA": "neutral",
+    "bears_HB": "supports"
+   },
+   {
+    "claim": "The student never observes the task cost as a reward \u2014 it only regresses MPC action labels (weighted Euclidean loss) on its own observations; the objective coupling lives entirely in the teacher's optimization.",
+    "grade": "E2",
+    "where": "Sec. 3 (student loss)",
+    "setting": "supervised student",
+    "quantitative": null,
+    "bears_HA": "neutral",
+    "bears_HB": "neutral"
+   }
+  ]
+ },
+ {
+  "cluster": "C7",
+  "ref": "arxiv:2409.15610",
+  "claims": [
+   {
+    "claim": "DIAL-MPC's dual-loop diffusion-style annealing (covariance shrinks jointly across N outer annealing iterations and along the horizon, det(Sigma) decaying exponentially in both indices) reduces quadruped tracking error 13.4x versus standard MPPI and beats trained RL policies by 50% on climbing, with no training. This is a pure schedule-side mechanism: the proposal stays Gaussian; only its variance schedule changes.",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "Walk-track error 0.024 vs 0.190 (MPPI-explore) and 0.544 (CMA-ES); crate-climb score 0.9 vs 0.2-0.3; 13.4x tracking-error reduction; +50% vs RL",
+    "setting": "Torque-level full-order quadruped control, JAX/Brax, RTX 4090, 2048 samples, 20-step horizon, 50 Hz; real Unitree jumping with payload",
+    "where": "Results tables (walk track / sequential jump / crate climb); Sec. on annealing schedule"
+   },
+   {
+    "claim": "No ablation isolates the annealing schedule parameters (beta1, beta2), so how much of the gain survives at K<=256 CPU samples is unknown; the schedule itself costs zero extra rollouts.",
+    "grade": "E4",
+    "bears_HA": "neutral",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "Same",
+    "where": "Absence of ablation section"
+   }
+  ],
+  "cpu_feasible": false,
+  "morphologies": [
+   "quadruped (Unitree, torque-level)"
+  ],
+  "objective_representation": "linear (weighted sum of reward terms)",
+  "not_read": null
+ },
+ {
+  "cluster": "C7",
+  "ref": "arxiv:2209.12842",
+  "claims": [
+   {
+    "claim": "RA-MPPI is weight-side: for each of M candidate trajectories it estimates CVaR of the cost under N=300 auxiliary disturbance rollouts and adds it as a penalty before the standard MPPI softmax, cutting collisions 55.7% on real hardware and 80% in simulation at essentially unchanged lap time.",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "Real: 9.0 vs 20.3 collisions/lap at 7.38s vs 7.11s lap; sim: 80% fewer collisions; M=1024 x N=300 = 3.07e5 rollouts/step on RTX3090 at 44.3 Hz",
+    "setting": "1/28-scale autonomous racing with obstacles, GPU",
+    "where": "Sec. III-B (Eq. 12), Fig. 5, real-experiment table"
+   },
+   {
+    "claim": "Tail-compression of the rollout-cost distribution before the softmax is sufficient for robustness gains; but the CVaR route needs ~300x extra rollouts per candidate, which is categorically infeasible at K<=256 CPU. FPL's bounded [0,1] atoms compress tails for free, making FPL a zero-cost surrogate for this weight-side mechanism \u2014 the closest alternative explanation for the in-repo FPL robustness win.",
+    "grade": "E3",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "300 auxiliary rollouts per candidate trajectory",
+    "setting": "Analysis of mechanism cost",
+    "where": "Sec. III-B sampling structure"
+   }
+  ],
+  "cpu_feasible": false,
+  "morphologies": [
+   "wheeled vehicle (1/28-scale car)"
+  ],
+  "objective_representation": "risk (CVaR-penalized)",
+  "not_read": null
+ },
+ {
+  "cluster": "C7",
+  "ref": "arxiv:2503.01476",
+  "claims": [
+   {
+    "claim": "STL robustness can be used inside a path-integral optimizer with NO smoothing: the non-differentiable min/max robustness is evaluated exactly on each sampled trajectory and added as terminal cost, with a variance-shrinking (beta->0) schedule providing convergence \u2014 sampling sidesteps the vanishing-gradient problem that plagues gradient/CBF methods on logic costs. This is prior art for logic-structured costs in path-integral control, but it is deterministic offline trajectory planning, not receding-horizon MPC.",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "Problem II: PI 0.12s vs GRAD 1.27s, MIP 1.16s, CMA-ES 1.62s; Problem III: PI 25.07s vs CMA-ES 79.82s, others >3600s timeout; M=955-81,650 samples, J=19-75 shrink phases, CPU (Ryzen 5)",
+    "setting": "Offline planning: integrator, 4D motion planning, single-track vehicle with 5 obstacles, K=10-50 steps",
+    "where": "Eq. for terminal cost E~(x_K); benchmark tables Problems I-III"
+   }
+  ],
+  "cpu_feasible": false,
+  "morphologies": [
+   "point integrator",
+   "planar vehicle (kinematic single-track)"
+  ],
+  "objective_representation": "logic (STL robustness, unsmoothed)",
+  "not_read": null
+ },
+ {
+  "cluster": "C7",
+  "ref": "arxiv:2603.13333",
+  "claims": [
+   {
+    "claim": "STL-SVPIO claims plain MPPI fails on sparse long-horizon logic costs (probability of sampling a valid sequence decays exponentially with horizon) and fixes it interaction-side: LogSumExp-smoothed STL robustness gradients transport 10 mutually-repulsive Stein particles, beating MPPI robustness 0.108 vs 0.005 on reach-avoid.",
+    "grade": "E4",
+    "bears_HA": "contradicts",
+    "bears_HB": "neutral",
+    "quantitative": "Reach-avoid: SVPIO 0.108 robustness in 19.15ms/20 iters vs MPPI 0.005 in 187ms/200 iters; Franka/Half-Cheetah runs need 300 iterations, 593-635s total on RTX A6000",
+    "setting": "MuJoCo MJX (differentiable sim, GPU), navigation up to 600-step horizons, multi-agent, 7-DoF Franka, Half-Cheetah backflip",
+    "where": "Table I; Sec. on curse of dimensionality claim"
+   },
+   {
+    "claim": "The method requires differentiable-simulator gradients and offline runtimes of minutes \u2014 it is not a real-time controller and is incompatible with the CPU-MuJoCo no-gradient stack, so it threatens FPL novelty (logic-shaped path-integral costs) but not FPL's real-time closed-loop niche.",
+    "grade": "E4",
+    "bears_HA": "neutral",
+    "bears_HB": "neutral",
+    "quantitative": "593-635s for 300 iterations on GPU",
+    "setting": "Same",
+    "where": "Compute section"
+   }
+  ],
+  "cpu_feasible": false,
+  "morphologies": [
+   "7-DoF manipulator (Franka)",
+   "Half-Cheetah",
+   "multi-agent point robots"
+  ],
+  "objective_representation": "logic (smoothed STL robustness as differentiable reward shaping)",
+  "not_read": null
+ },
+ {
+  "cluster": "C7",
+  "ref": "arxiv:2401.09241",
+  "claims": [
+   {
+    "claim": "Biased-MPPI injects ancillary-controller rollouts (LQR, energy-based, braking, go-to-goal, learned predictors) as the first J of K samples; the re-derivation for arbitrary sampling distributions cancels the usual importance-sampling cross-terms, so weights simplify to pure exp(-S/lambda). At K=50 it achieved 0 collisions where vanilla MPPI had 4-7 even at K=2000 \u2014 a proposal-side mechanism that succeeds by injecting external structure rather than adapting noise statistics, i.e., outside the failed in-repo family.",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "Two-vessel: 0 vs 4 collisions (K=50), 0 vs 7 (K=2000); Herengracht: 50/50 vs 45/50 success (K=1000); real Jackal: 0 vs 6 collisions; 10-50 Hz, horizon 50 steps",
+    "setting": "IEEE RA-L; pendulum, vessel navigation, real Clearpath Jackal; K=50-2000, CPU-scale budgets",
+    "where": "Eq. 9 sample construction, simplified weight equation, vessel/robot result tables"
+   },
+   {
+    "claim": "The mechanism transfers directly to FPL: per-fulfillment-atom greedy or classical controllers could be injected as biased samples with exact weights, carrying FPL structure into the proposal without touching covariance \u2014 an untried, CPU-free idea for the repo.",
+    "grade": "E3",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "Transfer analysis",
+    "where": "Mechanism (Sec. III)"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "rotary pendulum",
+   "surface vessels",
+   "wheeled robot (Jackal)"
+  ],
+  "objective_representation": "linear",
+  "not_read": null
+ },
+ {
+  "cluster": "C7",
+  "ref": "arxiv:2212.00541",
+  "claims": [
+   {
+    "claim": "Predictive Sampling \u2014 nominal spline + N-1 Gaussian perturbations, take the best \u2014 is competitive with iLQG and CEM at N=10 rollouts on humanoid standing, quadruped terrain/recovery, and Shadow-Hand cube reorientation, with 1-20 ms planning updates on CPU. Sampler sophistication matters far less than spline action parameterization and cost design.",
+    "grade": "E1",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "N=10 rollouts all tasks; sigma 0.1-0.25; horizons 23-35; 1-20ms/update; humanoid simulates 4000x realtime on one CPU thread",
+    "setting": "MJPC, CPU only (72-core Xeon and M1 Pro laptop), MuJoCo; replicated pattern (tiny-K spline sampling across morphologies) independently confirmed by arxiv:2409.10469 and arxiv:2511.19204",
+    "where": "Table 1 planner settings; Sec. 3 algorithm; Sec. 4 tasks"
+   },
+   {
+    "claim": "MJPC costs are sums of weighted norms of residuals with an optional risk-sensitive exponential transform c=(e^{Rl}-1)/R \u2014 the canonical hand-tuned linear/weighted-norm representation FPL competes against, with risk transform as the only built-in nonlinearity.",
+    "grade": "E4",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "Humanoid: M=6 terms, weights 100/1/100/10/0.01/0.025",
+    "setting": "Same",
+    "where": "Cost function section (norms, risk parameter R)"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "humanoid (27-DoF)",
+   "quadruped (Unitree A1)",
+   "dexterous hand (Shadow Hand)"
+  ],
+  "objective_representation": "linear weighted norms with optional risk transform",
+  "not_read": null
+ },
+ {
+  "cluster": "C7",
+  "ref": "arxiv:2511.19204",
+  "claims": [
+   {
+    "claim": "Reference-free sampling MPC with cubic Hermite splines over position AND velocity control points plus diffusion-inspired noise annealing discovers emergent gaits (trot, gallop 2.0 m/s, jump 0.68m, backflip, handstand) on a real Go2 and a 37-DoF G1 humanoid with only 30 samples (quadruped) / 60-70 (humanoid) at 50 Hz on a Mac Studio CPU \u2014 a direct one-controller-across-morphologies competitor at the same compute class as the repo.",
+    "grade": "E4",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "30 samples quadruped, 60-70 humanoid; 50 Hz, 20-30ms/update, 3 iterations; jump 68.4+/-0.2 cm; walking 10/10, handstand 10/10",
+    "setting": "Real Unitree Go2 + simulated G1 humanoid, CPU (M3), no GPU",
+    "where": "Sec. on Hermite parameterization; results and ablation tables"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "quadruped (Unitree Go2, real)",
+   "humanoid (Unitree G1, sim)"
+  ],
+  "objective_representation": "linear (modular weighted sum)",
+  "not_read": null
+ },
+ {
+  "cluster": "C7",
+  "ref": "arxiv:2102.09027",
+  "claims": [
+   {
+    "claim": "RMPPI provides the principal formal robustness alternative to FPL: an augmented importance sampler over coupled nominal+real systems with an embedded tracking controller (iLQG/CCM), plus a proven free-energy growth bound as a function of constraint satisfaction, tracking convergence rate, and sampling error. Architecture-side (planner-tracker interaction), not cost-side.",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "Bound: \u0394F <= (alpha - F(x0*)) + 2*EMV + (L_phi*gamma^T + L_q(1-gamma^T)/(1-gamma))*D_F",
+    "setting": "IEEE RA-L 2021; simulation + real GT AutoRally, GPU sampling",
+    "where": "Theorem (free energy growth), Eqs. 7-9"
+   },
+   {
+    "claim": "On real hardware the robustness machinery bought almost no headline performance: lap times statistically indistinguishable (RMPPI 31.07+/-0.33s vs MPPI 30.67+/-0.53s); the benefit is tolerating higher slip (0.84 vs 0.63 rad) without crashing. Formal-guarantee robustness delivers marginal empirical gains over plain MPPI in-distribution, supporting the 'good-enough plain MPPI + better cost' framing of H-A.",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "Lap: 30.67+/-0.53 (MPPI) vs 31.21+/-0.43 (Tube) vs 31.07+/-0.33s (RMPPI); max slip 0.63/0.65/0.84 rad; ~15 laps each",
+    "setting": "AutoRally hardware",
+    "where": "Table I"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "off-road wheeled vehicle (AutoRally)"
+  ],
+  "objective_representation": "linear (with constraint-satisfaction level in bound)",
+  "not_read": null
+ },
+ {
+  "cluster": "C7",
+  "ref": "arxiv:2607.06950",
+  "claims": [
+   {
+    "claim": "RC-MPPI shows model-plant mismatch perturbs MPPI importance weights in proportion to residual magnitude and inversely with temperature, and adapts three coupled knobs online from prediction-execution residuals (raise temperature, tighten constraints, contract exploration) \u2014 a schedule-side mismatch mechanism competing with H-A's claim that one fixed FPL spec suffices, but validated only on an LTI point mass and planar 2R arm.",
+    "grade": "E4",
+    "bears_HA": "contradicts",
+    "bears_HB": "neutral",
+    "quantitative": "No headline numbers in accessible text; probabilistic constraint-violation bounds under Lipschitz dynamics",
+    "setting": "2026 preprint; toy LTI + planar 2R manipulator",
+    "where": "Abstract + mechanism sections"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "point mass (LTI)",
+   "planar 2R manipulator"
+  ],
+  "objective_representation": "constrained",
+  "not_read": null
+ },
+ {
+  "cluster": "C7",
+  "ref": "arxiv:2511.08019",
+  "claims": [
+   {
+    "claim": "The PI-MPC survey organizes the field around 'optimal distribution = Boltzmann weight x prior' with design axes of variational family (Gaussian/GMM/particles), prior/proposal, divergence (forward vs reverse KL), and temperature \u2014 and explicitly notes the Boltzmann exp(-J/lambda) form has 'no strict theoretical requirement' and alternatives are possible, legitimizing FPL's S=-log(u) transform as a valid weight-side design choice.",
+    "grade": "E4",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "Tutorial/survey, 2025 preprint",
+    "where": "Framework section; Boltzmann-assumption remark"
+   },
+   {
+    "claim": "The survey contains NO discussion of temporal-logic, bounded, or otherwise structured cost languages, and lists cost/sample-complexity theory and decision-delay as open problems \u2014 the cost-representation axis FPL occupies is absent from the field's own map, supporting FPL's novelty positioning.",
+    "grade": "E4",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": null,
+    "setting": "Same",
+    "where": "Open problems section; absence check across survey"
+   }
+  ],
+  "cpu_feasible": null,
+  "morphologies": [],
+  "objective_representation": "other (survey; treats cost as arbitrary J)",
+  "not_read": null
+ },
+ {
+  "cluster": "C7",
+  "ref": "arxiv:2409.10469",
+  "claims": [
+   {
+    "claim": "Whole-body MPPI on a real Unitree Go1 works with 30 samples at 100 Hz on a desktop CPU by sampling 4 cubic-spline control points in joint space (0.4s horizon, T=40): walking, climbing a 0.24m box, and box pushing (9/10 forward) \u2014 the first real-world whole-body sampling-MPC deployment on legged hardware, directly at the repo's compute class.",
+    "grade": "E4",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "30 samples, 100 Hz, T=40 (0.4s), i9-12900KS CPU; box push 9/10 forward, 6/10 angled; optimal lambda~0.1",
+    "setting": "Real Unitree Go1, MuJoCo parallel rollouts, CPU",
+    "where": "Compute/ablation sections; task results"
+   },
+   {
+    "claim": "Ablations found cubic splines beat direct/zeroth-order sampling, performance plateaus at ~100 Hz replanning, and 40-50-step horizons are best \u2014 proposal parameterization and replan rate, not sampler cleverness, are the effective levers; costs are plain weighted quadratic/L1 tracking terms.",
+    "grade": "E4",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "Spline > direct sampling in all ablations; lambda=0.1",
+    "setting": "Same",
+    "where": "Ablation section"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "quadruped (Unitree Go1, real)"
+  ],
+  "objective_representation": "linear (Q/R tracking + L1 box term)",
+  "not_read": null
+ },
+ {
+  "cluster": "C7",
+  "ref": "arxiv:2104.00241",
+  "claims": [
+   {
+    "claim": "Tsallis VI-MPC proves the cost-to-weight transform is a free design axis: the deformed exponential exp_r(-J/lambda) = (1 - J/gamma)_+^{1/(r-1)} interpolates continuously between MPPI (r->1, exponential) and CEM (r->inf, hard threshold), with an explicit absolute-risk-aversion coefficient A(J) = -(r-2)/((r-1)(gamma-J)). Since MPPI-with-FPL computes exp(-S/lambda) = u^{1/lambda} with u a bounded power-mean, FPL is formally a member of this weight-transform family \u2014 power-law weighting on bounded fulfillment.",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "Special cases: r->1 MPPI, r->inf CEM step function",
+    "setting": "RSS 2021; theory + 5 systems",
+    "where": "Deformed-exponential derivation; risk-aversion analysis"
+   },
+   {
+    "claim": "Empirically the Tsallis transform mainly reduces variance and helps most in high dimensions: planar navigation -4.4% mean cost but -84% std vs MPPI; humanoid (56D state) mean improved 112% with -66% std \u2014 evidence that reshaping the weight transform alone yields robustness/consistency gains that grow with morphology complexity, consistent with the in-repo FPL result pattern.",
+    "grade": "E2",
+    "bears_HA": "supports",
+    "bears_HB": "neutral",
+    "quantitative": "Planar: 28714 vs 30023 mean, 570 vs 3644 std; humanoid: -899.27 vs -423.79 mean, 80 vs 234 std; N=256-1024 samples, T=20-150",
+    "setting": "Isaac Gym GPU sims: planar nav, quadcopter, Franka, Ant, 56D humanoid; Gaussian/GMM/Stein policies",
+    "where": "Table IV"
+   }
+  ],
+  "cpu_feasible": true,
+  "morphologies": [
+   "planar point robot",
+   "quadcopter",
+   "7-DoF manipulator (Franka)",
+   "Ant",
+   "humanoid (56D)"
+  ],
+  "objective_representation": "risk (deformed-exponential weight transform over standard costs)",
+  "not_read": null
+ }
+]

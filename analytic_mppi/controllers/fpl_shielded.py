@@ -102,7 +102,13 @@ class FplShieldedMPPI(MPPIv2):
             w = np.exp((safety_min - safety_min.max()) / temp)
         s = w.sum()
         if s <= 0 or not np.isfinite(s):
-            best = int(np.argmax(perf if feasible.any() else safety_min))
+            # Degenerate softmax: fall back to a single best sample. Among the feasible
+            # set when one exists (masking infeasible rollouts to -inf so the shield is
+            # not silently bypassed on this path), else the safest rollout.
+            if feasible.any():
+                best = int(np.argmax(np.where(feasible, obj, -np.inf)))
+            else:
+                best = int(np.argmax(safety_min))
             self.last_ess = 1.0
             return traj.knots[best].copy()
         w = w / s
