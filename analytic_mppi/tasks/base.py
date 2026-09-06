@@ -50,6 +50,37 @@ def power_mean(terms: np.ndarray, p: float, eps: float = 1e-8,
     return (np.sum(w * t ** p, axis=-1)) ** (1.0 / p)
 
 
+def soft_ramp(r: np.ndarray, f_min: float = 0.05, tau: float = 0.5) -> np.ndarray:
+    """A fulfillment ramp that is STRICTLY MONOTONE below its floor.
+
+    `r` is the raw normalized ramp coordinate (x - floor) / (full - floor): r >= 1 means
+    fully satisfied, r <= 0 means at/below the floor. The usual atom is `clip(r, 0, 1)`,
+    which is FLAT at 0 for every r <= 0 — an absorbing dead zone. That is fatal under a
+    conjunctive power-mean: `power_mean(f, p)` with p < 0 is pinned at ~eps as soon as ANY
+    atom clips (harmonic-mean of a zero is a zero), so the composite stops distinguishing
+    "just below the floor" from "catastrophically below" — precisely in the failure region
+    the p < 0 conjunction exists to guard. Making p more negative makes it MORE sensitive
+    to an atom carrying LESS information, which is how "optimize the conjunction harder"
+    can reduce safety.
+
+    This replaces the hard clip with an exponential tail:
+
+        r >= 1  ->  1
+        0<=r<1  ->  f_min + (1 - f_min) * r        (the original ramp, rescaled into
+                                                    [f_min, 1] — same ordering)
+        r < 0   ->  f_min * exp(r / tau)           (continuous at r=0, strictly decreasing,
+                                                    never reaching 0)
+
+    The satisfied band is untouched, the in-band ordering is untouched, and the atom stays
+    in (0, 1] so `-log(u)` remains finite. `tau` is in units of the band width: at one full
+    band width below the floor the atom is f_min * exp(-1/tau).
+    """
+    r = np.asarray(r, dtype=np.float64)
+    inside = f_min + (1.0 - f_min) * np.clip(r, 0.0, 1.0)
+    below = f_min * np.exp(np.minimum(r, 0.0) / tau)
+    return np.where(r < 0.0, below, inside)
+
+
 class Task:
     """Base class. Subclasses load a model and override the cost methods.
 

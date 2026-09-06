@@ -1,0 +1,19 @@
+{
+  "sha": "e74e64a442c6e4282875d8f972ad4c19d7bcd0f2",
+  "dirty": true,
+  "config_hash": {
+    "vanilla": "4d2f9debaa93",
+    "fpl": "0742a9e0d9c7"
+  },
+  "design_batches": [
+    {
+      "design_seed": 0,
+      "n_points": 64
+    },
+    {
+      "design_seed": 1,
+      "n_points": 128
+    }
+  ],
+  "note": "fpl config_hash reflects run.steps overridden to match the shared protocol length (500), not the 400-step flagship file on disk. Step 4: Latin Hypercube sweep over the 6 shared hyperparameters (docs/vanilla_mppi_hyperparams.md step 4); each arm keeps its own baseline for everything not swept. design_batches lists each independently-drawn LHS batch (design_seed, n_points) unioned into the full design -- see --append."
+}

@@ -1,5 +1,18 @@
 """Unified CLI for the CPU sampling-based MPC framework.
 
+Two ways in.
+
+1. A CONFIG FILE (preferred -- docs/config_design.md). One reviewable file per run, no
+   silently-dropped parameters, and a JSON provenance record of exactly what ran:
+
+    python -m analytic_mppi.run --config configs/env/hopper.py --live
+    python -m analytic_mppi.run --config configs/exp/hopper_argmax_ablation.py --index 1
+    python -m analytic_mppi.run --config configs/env/hopper.py \\
+        --set objective.p=1.0 --set task.kwargs.target_velocity=3.0 --print-config
+
+2. FLAGS (legacy). Note that only the flags listed in `_ALGO_PARAMS` for the chosen
+   --algo are forwarded; the rest are silently ignored. Prefer --config.
+
     python -m analytic_mppi.run --task <name> --algo <name> [common params] \\
                                 [algo params] [--fpl|--fpl-discounted ...] \\
                                 [--live | --record OUT.mp4]
@@ -42,15 +55,32 @@ def build_parser() -> argparse.ArgumentParser:
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    p.add_argument("--task", required=True, choices=sorted(TASKS), help="task name")
-    p.add_argument("--algo", required=True, choices=sorted(SAMPLING_CONTROLLERS), help="algorithm")
+    # Either --config (preferred, see docs/config_design.md) or --task + --algo.
+    p.add_argument("--config", default=None, metavar="PATH",
+                   help="python config file exposing CONFIG or configs() "
+                        "(e.g. configs/env/hopper.py). Supersedes --task/--algo and every "
+                        "hyperparameter flag below.")
+    p.add_argument("--index", type=int, default=None,
+                   help="--config only: which entry of configs() to run")
+    p.add_argument("--set", dest="overrides", action="append", default=[], metavar="KEY=VALUE",
+                   help="--config only: dotted-path override, repeatable "
+                        "(e.g. --set objective.p=1.0 --set task.kwargs.target_velocity=3.0). "
+                        "Values are parsed as JSON.")
+    p.add_argument("--print-config", action="store_true",
+                   help="--config only: print the fully-resolved config as JSON and exit")
+    p.add_argument("--save-config", default=None, metavar="DIR",
+                   help="--config only: write config.resolved.json + provenance.json to DIR")
+
+    p.add_argument("--task", choices=sorted(TASKS), help="task name (omit when using --config)")
+    p.add_argument("--algo", choices=sorted(SAMPLING_CONTROLLERS),
+                   help="algorithm (omit when using --config)")
 
     # rollout / sampling
     p.add_argument("--steps", type=int, default=20000, help="number of MPC steps (closed-loop)")
     p.add_argument("--num-samples", type=int, default=256)
     p.add_argument("--num-knots", type=int, default=4)
     p.add_argument("--plan-horizon-sec", type=float, default=0.6)
-    p.add_argument("--spline-type", choices=["zero", "linear"], default="zero")
+    p.add_argument("--spline-type", choices=["zero", "linear", "cubic"], default="zero")
     p.add_argument("--iterations", type=int, default=1, help="optimization iterations per MPC step")
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--nthread", type=int, default=None, help="rollout threads (default: cpu_count)")
@@ -92,6 +122,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--fpl-time-p", type=float, default=None,
                    help="FPL cost time aggregation: default (unset) = discounted mean over "
                         "time; set q<=0 for soft-min over time (rollout value = its worst moment)")
+    p.add_argument("--fpl-time-discount", action="store_true",
+                   help="with --fpl-time-p set, also weight the soft-min-over-time by the "
+                        "gamma discount (default off = pure soft-min, gamma ignored)")
 
     # output / viz
     p.add_argument("--live", action="store_true", help="open interactive MuJoCo viewer")
@@ -167,20 +200,90 @@ def _build(args: argparse.Namespace):
     # when set so other controllers' constructors aren't handed an unexpected arg.
     if args.fpl_time_p is not None:
         kwargs["fpl_time_p"] = args.fpl_time_p
+        kwargs["fpl_time_discount"] = bool(args.fpl_time_discount)
     ctrl = cls(task, backend, **kwargs)
     return task, backend, ctrl
 
 
+def _build_from_config(args: argparse.Namespace):
+    """Build (task, backend, ctrl) from --config, and patch `args` with the fields the
+    runners and cost printer read (steps / task / algo / fpl flags / init fn).
+
+    Unlike `_build`, nothing is silently dropped: `config.resolve` errors on any parameter
+    the chosen controller cannot accept, and reports at-default ones in `.dropped`.
+    """
+    from analytic_mppi.config import (apply_overrides, load_config_file, resolve,
+                                      save_resolved)
+    from analytic_mppi.eval import make_controller
+
+    cfg = apply_overrides(load_config_file(args.config, args.index), args.overrides)
+    if args.print_config:
+        print(cfg.to_json())
+        raise SystemExit(0)
+    r = resolve(cfg)
+
+    if len(cfg.run.seeds) > 1:
+        print(f"note: config lists {len(cfg.run.seeds)} seeds; run.py executes one episode. "
+              f"Using seed={cfg.run.seeds[0]} (multi-seed studies go through eval.run_study).")
+    seed = cfg.run.seeds[0]
+
+    # Mirror the config onto the flags the rest of this module already reads.
+    args.task = r.task_name
+    args.algo = r.controller
+    args.steps = cfg.run.steps
+    args.fpl = cfg.objective.mode == "fpl_cost"
+    args.fpl_discounted = cfg.objective.mode == "fpl_discounted"
+    args.fpl_p = cfg.objective.p
+    args.fpl_gamma = cfg.objective.gamma
+    args.fpl_time_p = cfg.objective.time_p
+    args._init_fn = r.init_fn
+    args._config = cfg
+    args._resolved = r
+    if cfg.run.mode == "live":
+        args.live = True
+    elif cfg.run.mode == "record":
+        args.record = True
+    if args.out is None and cfg.run.out is not None:
+        args.out = cfg.run.out
+
+    task, backend, ctrl = make_controller(
+        r.task_name, r.controller, seed=seed, task_kwargs=r.task_kwargs, **r.build
+    )
+    if args.save_config:
+        print(f"wrote {save_resolved(cfg, args.save_config)}")
+    return task, backend, ctrl
+
+
 def _print_header(task, backend, ctrl, args):
+    cfg = getattr(args, "_config", None)
+    if cfg is not None:
+        print(f"config = {args.config}  label={cfg.label or '<unlabelled>'}  hash={cfg.hash()}")
+        print(f"         proposal={cfg.proposal.kind}  update={cfg.update.rule}  "
+              f"objective={cfg.objective.mode}(p={cfg.objective.p})")
+        dropped = getattr(args, "_resolved").dropped
+        if dropped:
+            print(f"         at-default params {type(ctrl).__name__} does not accept, "
+                  f"not passed: {list(dropped)}")
     print(f"task   = {args.task}  (nq={task.nq}, nv={task.nv}, nu={task.nu}, nsd={task.nsensordata}, dt={backend.dt})")
     print(f"algo   = {args.algo} -> {type(ctrl).__name__}  K={ctrl.num_samples} knots={ctrl.num_knots} H={ctrl.H} spline={ctrl.spline_type}")
     fpl = "cost" if args.fpl else ("discounted" if args.fpl_discounted else "off")
-    time_agg = "discounted-mean" if args.fpl_time_p is None else f"soft-min(q={args.fpl_time_p})"
+    if args.fpl_time_p is None:
+        time_agg = "discounted-mean"
+    elif getattr(args, "fpl_time_discount", False):
+        time_agg = f"soft-min+discount(q={args.fpl_time_p})"
+    else:
+        time_agg = f"soft-min(q={args.fpl_time_p})"
     print(f"FPL    = {fpl} (p={args.fpl_p}, gamma={args.fpl_gamma}, time={time_agg})")
 
 
-def _set_initial_state(task_name: str, backend):
-    """Per-task initial-state setup."""
+def _set_initial_state(args: argparse.Namespace, backend):
+    """Initial-state setup: the config's named init fn if there is one, else per-task."""
+    init_fn = getattr(args, "_init_fn", None)
+    if init_fn is not None:
+        init_fn(backend)
+        return backend.get_state()
+
+    task_name = args.task
     state = backend.get_state()
     if task_name == "pendulum":
         # Hang down: theta=0, theta_dot=0
@@ -244,7 +347,7 @@ def _print_step_costs(step: int, task, backend, ctrl, u, args) -> None:
 
 
 def _run_headless(task, backend, ctrl, args) -> None:
-    state = _set_initial_state(args.task, backend)
+    state = _set_initial_state(args, backend)
     states_hist = [state.copy()]
     ctrls_hist = []
     plan_times = []
@@ -267,7 +370,7 @@ def _run_live(task, backend, ctrl, args) -> None:
     import mujoco.viewer as mj_viewer
     from mujoco import rollout as mj_rollout
 
-    state = _set_initial_state(args.task, backend)
+    state = _set_initial_state(args, backend)
     # Hide the left (settings) and right (info) UI panels — toggle back at runtime with Tab.
     viewer = mj_viewer.launch_passive(backend.model, backend.data,
                                       show_left_ui=False, show_right_ui=False)
@@ -310,7 +413,7 @@ def _run_record(task, backend, ctrl, args) -> None:
     out = Path(args.out or (DEFAULT_RUNS / f"{args.task}_{args.algo}.mp4"))
     out.parent.mkdir(parents=True, exist_ok=True)
 
-    state = _set_initial_state(args.task, backend)
+    state = _set_initial_state(args, backend)
     fps = max(1, int(round(1.0 / backend.dt)))
     frames = []
     renderer = mujoco.Renderer(backend.model, width=720, height=540)
@@ -332,10 +435,26 @@ def _run_record(task, backend, ctrl, args) -> None:
 
 def main() -> None:
     args = build_parser().parse_args()
+
+    if args.config:
+        from analytic_mppi.config import ConfigError
+        try:
+            task, backend, ctrl = _build_from_config(args)
+        except ConfigError as e:
+            raise SystemExit(f"config error: {e}")
+    else:
+        if not (args.task and args.algo):
+            raise SystemExit("supply --config PATH, or both --task and --algo")
+        for flag in ("index", "print_config", "save_config"):
+            if getattr(args, flag) not in (None, False):
+                raise SystemExit(f"--{flag.replace('_', '-')} requires --config")
+        if args.overrides:
+            raise SystemExit("--set requires --config")
+        task, backend, ctrl = _build(args)
+
     if args.live and args.record:
         raise SystemExit("choose one of --live or --record (cannot be combined)")
 
-    task, backend, ctrl = _build(args)
     _print_header(task, backend, ctrl, args)
 
     if args.live:

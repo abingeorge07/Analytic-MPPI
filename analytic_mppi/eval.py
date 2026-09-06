@@ -56,6 +56,21 @@ def _resolve_controller(controller: ControllerSpec) -> type:
     return controller
 
 
+def _make_plan_backend(backend: str, model_path, nthread: Optional[int]):
+    """Build the backend the controller PLANS on. Never the one the closed loop steps.
+
+    "mjx" is imported lazily so the CPU path never pays for (or requires) jax.
+    """
+    if backend == "mujoco":
+        return MujocoBackend(model_path, nthread=nthread)
+    if backend == "mjx":
+        raise NotImplementedError(
+            "backend='mjx' lands in phase 1 (analytic_mppi/dynamics/mjx_backend.py). "
+            "Install the extra with `pip install -e '.[mjx]'` once it exists."
+        )
+    raise ValueError(f"unknown backend {backend!r} (mujoco | mjx)")
+
+
 def _fpl_kwargs(cost_mode: str, fpl_p: float, fpl_gamma: float) -> Dict[str, Any]:
     if cost_mode == "normal":
         return {}
@@ -89,6 +104,7 @@ def make_controller(
     fpl_gamma: float = 0.99,
     seed: int = 0,
     nthread: Optional[int] = None,
+    backend: str = "mujoco",
     cost_gd: Optional[Dict[str, Any]] = None,
     task_kwargs: Optional[Dict[str, Any]] = None,
     true_perturbation: Optional[Dict[str, float]] = None,
@@ -116,7 +132,7 @@ def make_controller(
     cls = _resolve_controller(controller)
     task = make_task(task_name, **(task_kwargs or {}))
     # The controller always plans on the NOMINAL model (its belief).
-    plan_backend = MujocoBackend(task.model_path, nthread=nthread)
+    plan_backend = _make_plan_backend(backend, task.model_path, nthread)
     common = dict(
         num_samples=num_samples,
         num_knots=num_knots,
@@ -130,9 +146,17 @@ def make_controller(
     if cost_gd:
         wrap_controller_with_gd_refine(ctrl, **cost_gd)
     # run_episode steps the returned backend. Nominal (== plan_backend) unless a
-    # perturbation makes reality differ from the controller's model.
-    step_backend = (MujocoBackend(task.model_path, nthread=nthread, perturb=true_perturbation)
-                    if true_perturbation else plan_backend)
+    # perturbation makes reality differ from the controller's model -- or unless planning
+    # happens on MJX, in which case the loop is stepped by CPU MuJoCo regardless: the
+    # physics of record stays the one behind every existing result, so an mjx-planned run
+    # is directly comparable to its CPU baseline, and the viewer / --print-costs / render
+    # paths keep the real MjData they need. A single un-batched GPU step would also be
+    # pure dispatch latency for no gain.
+    if true_perturbation or backend != "mujoco":
+        step_backend = MujocoBackend(task.model_path, nthread=nthread,
+                                     perturb=true_perturbation)
+    else:
+        step_backend = plan_backend
     return task, step_backend, ctrl
 
 

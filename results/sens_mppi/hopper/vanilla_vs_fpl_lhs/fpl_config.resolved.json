@@ -1,0 +1,47 @@
+{
+  "label": "fpl mppi (hopper, 8s flagship)",
+  "notes": "Ported from runs/capability/hopper/mppi_fpl_K256_8s/config.json. 30-seed result: survival 1.00 (Wilson95 lb 0.886), vx 1.665 m/s (83% of target). See module docstring for provenance and the vanilla-MPPI comparison point.",
+  "objective": {
+    "floor_weight": 1.0,
+    "gamma": 0.99,
+    "group_p": null,
+    "mode": "fpl_cost",
+    "p": -1.0,
+    "term_indices": null,
+    "time_p": -2.0,
+    "weights": null
+  },
+  "proposal": {
+    "extra": {},
+    "include_mean": false,
+    "kind": "gaussian",
+    "noise_level": 0.6,
+    "num_knots": 6,
+    "num_samples": 256,
+    "plan_horizon": 0.9
+  },
+  "run": {
+    "init": "hopper_stand",
+    "iterations": 1,
+    "mode": "headless",
+    "nthread": null,
+    "out": null,
+    "seeds": [
+      0
+    ],
+    "spline_type": "cubic",
+    "steps": 500
+  },
+  "spec_version": 1,
+  "task": {
+    "kwargs": {
+      "target_velocity": 2.0
+    },
+    "name": "hopper"
+  },
+  "update": {
+    "extra": {},
+    "rule": "path_integral",
+    "temperature": 0.1
+  }
+}

@@ -90,12 +90,34 @@ class SamplingController:
         # scores ONLY nominal_fulfillment through the normal fpl_cost/fpl_discounted
         # pipeline (single-term reward — power_mean of one atom is that atom).
         fpl_term_indices: Optional[Sequence[int]] = None,
+        # Split the objective-axis collapse into a CONJUNCTION over constraint atoms and a
+        # separate composition with the progress atoms. `fpl_conj_indices` lists the atoms
+        # that belong inside the p<0 conjunction (the "must hold" floors); every other atom
+        # is combined with the conjunction's scalar at the OUTER level using `fpl_outer_p`
+        # (default 0 -> geometric mean). None keeps the original single flat power-mean
+        # over all atoms.
+        #
+        # Why this exists: a power-mean with p<0 is "improve the least-satisfied objective".
+        # That is a safety operator only if the argmin is a SAFETY atom. Put a progress atom
+        # (forward speed) inside the same conjunction and, whenever speed is the argmin, a
+        # sharper p means "go faster, ignore posture" — so tightening the conjunction can
+        # reduce survival. Progress objectives have no floor to hold, so they do not belong
+        # inside the conjunction; keeping them outside makes "sharper p" a strictly
+        # safety-directed operation.
+        fpl_conj_indices: Optional[Sequence[int]] = None,
+        fpl_outer_p: float = 0.0,
+        fpl_outer_weights: Optional[Sequence[float]] = None,
         # Hybrid: unbounded quadratic penalties for "target" objectives (strong signal
         # to reach/maximize) + FPL log-barrier -log(fulfillment) for "floor" objectives
         # (hard "never fail" safety). Which terms are floors is set by the task's
         # `floor_term_indices`. floor_weight scales the barrier.
         use_hybrid: bool = False,
         floor_weight: float = 1.0,
+        # When fpl_time_p is set (soft-min/weakest-moment over time), also weight that
+        # power-mean by the gamma discount (weights=disc) instead of ignoring gamma
+        # entirely. False (default) reproduces every existing fpl_time_p result exactly
+        # -- this only changes behavior for callers that opt in.
+        fpl_time_discount: bool = False,
     ):
         if sum([bool(use_fpl_cost), bool(use_fpl_discounted), bool(use_fpl_layered),
                 bool(use_hybrid)]) > 1:
@@ -126,8 +148,14 @@ class SamplingController:
         self.fpl_weights = (None if fpl_weights is None
                             else np.asarray(fpl_weights, dtype=np.float64))
         self.fpl_group_p = None if fpl_group_p is None else float(fpl_group_p)
+        self.fpl_conj_indices = (None if fpl_conj_indices is None
+                                 else list(int(i) for i in fpl_conj_indices))
+        self.fpl_outer_p = float(fpl_outer_p)
+        self.fpl_outer_weights = (None if fpl_outer_weights is None
+                                  else np.asarray(fpl_outer_weights, dtype=np.float64))
         self.use_hybrid = bool(use_hybrid)
         self.floor_weight = float(floor_weight)
+        self.fpl_time_discount = bool(fpl_time_discount)
         self.nu = int(task.nu)
 
         self.tk = make_knot_times(self.plan_horizon, self.num_knots)
@@ -257,6 +285,49 @@ class SamplingController:
         terminal_sel = terminal_f[..., with_term]
         return running_sel, terminal_sel
 
+    def _collapse_objectives(self, f: np.ndarray,
+                             weights: "np.ndarray | None") -> np.ndarray:
+        """Collapse the atom axis of `f` (*lead, n) to a scalar composite in (0,1].
+
+        Default (`fpl_conj_indices is None`): one flat power-mean at `fpl_p` over all
+        atoms — the original behaviour. Otherwise a two-level composition:
+
+            conj  = power_mean(f[conj_indices], fpl_p)        # the "must hold" floors
+            value = power_mean([conj, *f[others]], fpl_outer_p)
+
+        Indices at or beyond `n` are dropped, so this works unchanged on the terminal
+        slice (which carries a PREFIX of the running atoms — hopper's control atom has no
+        terminal value). If the terminal slice happens to contain no non-conjunction atom,
+        the outer level degenerates to the conjunction itself, which is the right limit.
+        """
+        n = f.shape[-1]
+        idx = self.fpl_conj_indices
+        if idx is None:
+            return power_mean(f, self.fpl_p, weights=weights)
+        conj = [i for i in idx if 0 <= i < n]
+        rest = [i for i in range(n) if i not in conj]
+        if not conj:
+            return power_mean(f, self.fpl_p, weights=weights)
+        w_conj = None if weights is None else np.asarray(weights)[conj]
+        inner = power_mean(f[..., conj], self.fpl_p, weights=w_conj)   # (*lead,)
+        if not rest:
+            return inner
+        outer = np.concatenate([inner[..., None], f[..., rest]], axis=-1)
+        ow = self.fpl_outer_weights
+        if ow is None:
+            # Default: the conjunction carries the mass of the atoms it absorbed. With this
+            # weighting the split is an exact no-op when fpl_outer_p == fpl_p — e.g. at
+            # p = -1, 1/(|C|/n · 1/M + Σ_rest 1/n · 1/f_i) with M = |C|/Σ_C 1/f_j collapses
+            # back to n/Σ_all 1/f_i. So `fpl_conj_indices` changes only WHERE a sharper
+            # fpl_p acts, not the operating point, and it stays exact on the terminal slice
+            # where some atoms are absent.
+            ow = np.array([float(len(conj))] + [1.0] * len(rest))
+        else:
+            # Caller supplies [w_conjunction, w_atom0, w_atom1, ...] in the task's atom
+            # order; select the entries that survived into `rest`.
+            ow = np.concatenate([np.asarray(ow)[:1], np.asarray(ow)[1:][rest]])
+        return power_mean(outer, self.fpl_outer_p, weights=ow)
+
     def _score_hybrid(self, traj: Trajectory) -> np.ndarray:
         # cost = Σ_targets (∫ quadratic penalty dt)  +  floor_weight · Σ_floors (∫ -log(f) dt)
         # Target terms keep the unbounded quadratic's strong signal (reach/maximize);
@@ -316,9 +387,9 @@ class SamplingController:
             # axis; the terminal slice uses the matching prefix.
             w = self.fpl_weights
             w_term = None if w is None else w[:n_term]
-            per_step_run = power_mean(running, self.fpl_p, weights=w)      # (K, H)
+            per_step_run = self._collapse_objectives(running, w)            # (K, H)
             if n_term > 0:
-                per_step_term = power_mean(terminal, self.fpl_p, weights=w_term)  # (K,)
+                per_step_term = self._collapse_objectives(terminal, w_term)  # (K,)
                 per_step = np.concatenate([per_step_run, per_step_term[:, None]], axis=1)
                 disc, norm = discounts_full, norm_full
             else:
@@ -330,7 +401,12 @@ class SamplingController:
             else:
                 # Soft-min over time: value = (power-mean q<=0 of) the per-step
                 # composites, so one catastrophic step tanks the whole rollout.
-                reward = power_mean(per_step, self.fpl_time_p)            # (K,)
+                # fpl_time_discount additionally weights this power-mean by the gamma
+                # discount (disc), so a near-term failure still dominates more than an
+                # identical failure late in the plan -- weakest-moment AND discounted,
+                # rather than the two being mutually exclusive.
+                time_w = disc if self.fpl_time_discount else None
+                reward = power_mean(per_step, self.fpl_time_p, weights=time_w)  # (K,)
         else:  # use_fpl_discounted
             # Each term gets its own discount-sum across its lifetime,
             # normalized to [0,1] by its own finite-horizon factor, then

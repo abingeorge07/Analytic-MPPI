@@ -24,10 +24,20 @@ class WalkerTask(Task):
     cost_term_names = ["height_cost", "orientation_cost", "velocity_cost", "control_cost"]
     cost_term_names_f = ["height_fulfillment", "orientation_fulfillment", "velocity_fulfillment", "control_fulfillment"]
 
-    def __init__(self, *, target_velocity: float = 1.5, target_height: float = 1.2):
+    def __init__(self, *, target_velocity: float = 1.5, target_height: float = 1.2,
+                 height_weight: float = 10.0, orientation_weight: float = 10.0,
+                 velocity_weight: float = 1.0, control_weight: float = 0.001):
         super().__init__(_MODEL_PATH)
         self.target_velocity = float(target_velocity)
         self.target_height = float(target_height)
+        # Vanilla (normal-mode) quadratic cost weights. Exposed as ctor kwargs so a
+        # config's task.kwargs can tune them when searching for a working vanilla-MPPI
+        # setup; defaults reproduce the original hardcoded values exactly (mirrors
+        # HopperTask's identical ctor-kwarg pattern).
+        self.height_weight = float(height_weight)
+        self.orientation_weight = float(orientation_weight)
+        self.velocity_weight = float(velocity_weight)
+        self.control_weight = float(control_weight)
         # cache sensor address spans
         m = self.mj_model
         self._pos_adr = int(m.sensor_adr[mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_SENSOR, "torso_position")])
@@ -49,15 +59,15 @@ class WalkerTask(Task):
         height = self._torso_height(sensordata)
         vel = self._torso_vel_x(sensordata)
         zax = self._torso_zaxis_z(sensordata)
-        height_cost = 10.0 * (height - self.target_height) ** 2
-        orient_cost = 10.0 * (zax - 1.0) ** 2
-        velocity_cost = 1.0 * (vel - self.target_velocity) ** 2
+        height_cost = self.height_weight * (height - self.target_height) ** 2
+        orient_cost = self.orientation_weight * (zax - 1.0) ** 2
+        velocity_cost = self.velocity_weight * (vel - self.target_velocity) ** 2
         zero = np.zeros_like(height_cost)
         return np.stack([height_cost, orient_cost, velocity_cost, zero], axis=-1)
 
     def running_cost_terms(self, qpos, qvel, sensordata, u) -> np.ndarray:
         terms = self.terminal_cost_terms(qpos, qvel, sensordata)
-        control_cost = 0.001 * np.sum(u ** 2, axis=-1)
+        control_cost = self.control_weight * np.sum(u ** 2, axis=-1)
         # replace the last (zero) column with control cost
         out = terms.copy()
         out[..., -1] = control_cost

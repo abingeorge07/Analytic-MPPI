@@ -77,6 +77,10 @@ def sampler_kwargs(sampler: str, env: str, K: int) -> Dict[str, Any]:
     if sampler == "cem":
         return dict(sigma_start=noise, sigma_min=max(0.05, 0.1 * noise),
                     num_elites=max(4, K // 8), explore_fraction=0.1, fpl_time_p=time_p)
+    if sampler == "dial":
+        # DIAL's ctor does not forward **kwargs (no fpl_time_p slot), unlike the other
+        # samplers here -- only pass what it actually declares.
+        return dict(noise_level=noise, temperature=temp, beta_opt_iter=3.0, beta_horizon=3.0)
     raise ValueError(f"unknown sampler {sampler!r}")
 
 
@@ -87,7 +91,11 @@ def _controller_name(sampler: str) -> str:
 def cost_kwargs(cost: str, env: str) -> Dict[str, Any]:
     """FPL vs linear cost, both through the fpl_cost pipeline so p=1 IS the linear
     weighted sum and only the objective-axis composition differs (handoff fairness).
-    `cost` is 'fpl', 'linear' (best-safe weight), or 'lin:wv' for a specific weight."""
+    `cost` is 'fpl', 'linear' (best-safe weight), 'lin:wv' for a specific weight, or
+    'normal' for the raw quadratic penalty (bypasses the fulfillment pipeline entirely
+    -- see `cost_mode` in run_trial)."""
+    if cost == "normal":
+        return dict()
     if cost == "fpl":
         return dict(fpl_p=-1.0)
     if cost == "linear":
@@ -128,7 +136,8 @@ def run_trial(env: str, sampler: str, cost: str, seed: int, K: int, *,
               steps: Optional[int] = None, difficulty: Optional[float] = None,
               true_perturbation: Optional[Dict[str, float]] = None,
               cost_gd: Optional[Dict[str, Any]] = None,
-              extra: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+              extra: Optional[Dict[str, Any]] = None,
+              task_extra: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Run ONE closed-loop episode and return its scalar outcome metrics.
 
     Enforces the fairness protocol: same horizon/knots/steps/difficulty for every
@@ -144,11 +153,19 @@ def run_trial(env: str, sampler: str, cost: str, seed: int, K: int, *,
     )
     if extra:
         build.update(extra)
-    task = make_task(spec["task"], **{spec["difficulty_key"]: diff})
+    # `task_extra` carries Task-ctor settings that are part of the COST SPEC rather than
+    # the sampler (e.g. hopper's atom_soft_floor). It goes to both the scoring task inside
+    # the controller and the metrics task here, so they cannot drift apart.
+    tkw = {spec["difficulty_key"]: diff, **(task_extra or {})}
+    task = make_task(spec["task"], **tkw)
+    # Every 'cost' arm except 'normal' goes through the fpl_cost pipeline (fpl_p selects
+    # linear-vs-conjunctive within it); 'normal' is the raw quadratic penalty, which needs
+    # cost_mode="normal" so eval.make_controller doesn't set use_fpl_cost.
     res = run_episode(
         spec["task"], _controller_name(sampler), steps=steps, seed=seed,
-        cost_mode="fpl_cost", init_fn=spec["init"], cost_gd=cost_gd,
-        task_kwargs={spec["difficulty_key"]: diff},
+        cost_mode=("normal" if cost == "normal" else "fpl_cost"),
+        init_fn=spec["init"], cost_gd=cost_gd,
+        task_kwargs=tkw,
         true_perturbation=true_perturbation, **build,
     )
     m = _metrics(env, res, task)

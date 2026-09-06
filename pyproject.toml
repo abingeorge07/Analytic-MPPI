@@ -16,6 +16,13 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest"]
 viz = ["imageio[ffmpeg]>=2.30"]
+# GPU planning backend (run.backend="mjx") and gradient-based MPC. Opt-in: the CPU
+# MuJoCo path is the default and never imports jax. mujoco-mjx is pinned EXACTLY because
+# it pip-depends on its same-version mujoco: an unpinned `mujoco-mjx>=3.5` upgrades the
+# core CPU sim as a side effect, and mujoco 3.12 was measured to change fixed-seed hopper
+# trajectories vs 3.5.0 -- silently breaking comparability with every existing result.
+# Bump both this pin and the base `mujoco` requirement together, deliberately.
+mjx = ["mujoco-mjx==3.5.0", "jax[cuda12]>=0.5"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["analytic_mppi"]

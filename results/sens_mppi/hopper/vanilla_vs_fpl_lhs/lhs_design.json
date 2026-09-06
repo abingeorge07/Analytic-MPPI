@@ -1,0 +1,3695 @@
+{
+  "batches": [
+    {
+      "design_seed": 0,
+      "n_points": 64
+    },
+    {
+      "design_seed": 1,
+      "n_points": 128
+    }
+  ],
+  "n_points": 192,
+  "dimensions": [
+    {
+      "name": "num_samples",
+      "field": "proposal.num_samples",
+      "kind": "log_int"
+    },
+    {
+      "name": "num_knots",
+      "field": "proposal.num_knots",
+      "kind": "linear_int"
+    },
+    {
+      "name": "plan_horizon",
+      "field": "proposal.plan_horizon",
+      "kind": "linear"
+    },
+    {
+      "name": "noise_level",
+      "field": "proposal.noise_level",
+      "kind": "linear"
+    },
+    {
+      "name": "temperature",
+      "field": "update.temperature",
+      "kind": "linear"
+    },
+    {
+      "name": "spline_type",
+      "field": "run.spline_type",
+      "kind": "categorical"
+    }
+  ],
+  "points": [
+    {
+      "index": 0,
+      "params": {
+        "num_samples": 133,
+        "num_knots": 5,
+        "plan_horizon": 0.9717533387272355,
+        "noise_level": 0.4541074819144677,
+        "temperature": 0.14928352677928522,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.26369506610641724,
+        "num_knots": 0.4197621608656371,
+        "plan_horizon": 0.9596476267531935,
+        "noise_level": 0.3082149638289355,
+        "temperature": 0.661890178528568,
+        "spline_type": 0.8093057557209914
+      }
+    },
+    {
+      "index": 1,
+      "params": {
+        "num_samples": 305,
+        "num_knots": 2,
+        "plan_horizon": 0.7871716716959549,
+        "noise_level": 0.7147094419991913,
+        "temperature": 0.16619587728855378,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.5634151255438311,
+        "num_knots": 0.0009291273687552885,
+        "plan_horizon": 0.6959595309942214,
+        "noise_level": 0.8294188839983827,
+        "temperature": 0.7746391819236916,
+        "spline_type": 0.5248208476865523
+      }
+    },
+    {
+      "index": 2,
+      "params": {
+        "num_samples": 209,
+        "num_knots": 6,
+        "plan_horizon": 0.33404421196684986,
+        "noise_level": 0.46681830793512813,
+        "temperature": 0.11451832830807612,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.42712682907102595,
+        "num_knots": 0.6153245391923576,
+        "plan_horizon": 0.04863458852407121,
+        "noise_level": 0.33363661587025634,
+        "temperature": 0.43012218872050745,
+        "spline_type": 0.783290204034915
+      }
+    },
+    {
+      "index": 3,
+      "params": {
+        "num_samples": 91,
+        "num_knots": 8,
+        "plan_horizon": 0.6982009915694924,
+        "noise_level": 0.40562369589323616,
+        "temperature": 0.07192659964337351,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.12734811667023185,
+        "num_knots": 0.9754652197059153,
+        "plan_horizon": 0.5688585593849892,
+        "noise_level": 0.21124739178647237,
+        "temperature": 0.1461773309558234,
+        "spline_type": 0.22005844256088716
+      }
+    },
+    {
+      "index": 4,
+      "params": {
+        "num_samples": 439,
+        "num_knots": 7,
+        "plan_horizon": 0.45312828879804445,
+        "noise_level": 0.4127087589353925,
+        "temperature": 0.1054002054200895,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.6945365526038951,
+        "num_knots": 0.8357632741692729,
+        "plan_horizon": 0.21875469828292066,
+        "noise_level": 0.225417517870785,
+        "temperature": 0.3693347028005966,
+        "spline_type": 0.36442271395477843
+      }
+    },
+    {
+      "index": 5,
+      "params": {
+        "num_samples": 179,
+        "num_knots": 3,
+        "plan_horizon": 0.5925166641944246,
+        "noise_level": 0.7690673247021308,
+        "temperature": 0.06564632994206436,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.37181756672323896,
+        "num_knots": 0.1090072237802507,
+        "plan_horizon": 0.4178809488491781,
+        "noise_level": 0.9381346494042616,
+        "temperature": 0.10430886628042907,
+        "spline_type": 0.014493106397905667
+      }
+    },
+    {
+      "index": 6,
+      "params": {
+        "num_samples": 642,
+        "num_knots": 4,
+        "plan_horizon": 0.3858798927900622,
+        "noise_level": 0.5280783394914125,
+        "temperature": 0.06302721628431648,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.8317287845155273,
+        "num_knots": 0.26212017481409106,
+        "plan_horizon": 0.12268556112866026,
+        "noise_level": 0.4561566789828249,
+        "temperature": 0.08684810856210991,
+        "spline_type": 0.42925964888802315
+      }
+    },
+    {
+      "index": 7,
+      "params": {
+        "num_samples": 76,
+        "num_knots": 5,
+        "plan_horizon": 0.5093320652403771,
+        "noise_level": 0.4323830050648799,
+        "temperature": 0.13059522245715283,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.0633128328291314,
+        "num_knots": 0.5204508962924884,
+        "plan_horizon": 0.2990458074862531,
+        "noise_level": 0.2647660101297598,
+        "temperature": 0.5373014830476855,
+        "spline_type": 0.07649177979918201
+      }
+    },
+    {
+      "index": 8,
+      "params": {
+        "num_samples": 804,
+        "num_knots": 4,
+        "plan_horizon": 0.6139476568513555,
+        "noise_level": 0.5043950759746353,
+        "temperature": 0.08193102214516985,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.9125711224972114,
+        "num_knots": 0.31671619977345,
+        "plan_horizon": 0.4484966526447937,
+        "noise_level": 0.4087901519492706,
+        "temperature": 0.21287348096779898,
+        "spline_type": 0.038432421144953516
+      }
+    },
+    {
+      "index": 9,
+      "params": {
+        "num_samples": 563,
+        "num_knots": 4,
+        "plan_horizon": 0.6917933150293163,
+        "noise_level": 0.5722816588473654,
+        "temperature": 0.05607477214815808,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.7843517663204571,
+        "num_knots": 0.3103612531904581,
+        "plan_horizon": 0.5597047357561662,
+        "noise_level": 0.5445633176947309,
+        "temperature": 0.04049848098772048,
+        "spline_type": 0.933673720415002
+      }
+    },
+    {
+      "index": 10,
+      "params": {
+        "num_samples": 99,
+        "num_knots": 8,
+        "plan_horizon": 0.8576137472814103,
+        "noise_level": 0.5017354465551909,
+        "temperature": 0.08361013404073595,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.15766801633779878,
+        "num_knots": 0.9356454245740264,
+        "plan_horizon": 0.7965910675448717,
+        "noise_level": 0.40347089311038187,
+        "temperature": 0.2240675602715729,
+        "spline_type": 0.8200801121201506
+      }
+    },
+    {
+      "index": 11,
+      "params": {
+        "num_samples": 72,
+        "num_knots": 3,
+        "plan_horizon": 0.8998539592759078,
+        "noise_level": 0.5608694824771727,
+        "temperature": 0.15617937737343185,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.04031769353104454,
+        "num_knots": 0.22672978914911945,
+        "plan_horizon": 0.8569342275370113,
+        "noise_level": 0.5217389649543455,
+        "temperature": 0.7078625158228788,
+        "spline_type": 0.136073472834881
+      }
+    },
+    {
+      "index": 12,
+      "params": {
+        "num_samples": 400,
+        "num_knots": 5,
+        "plan_horizon": 0.5452636646845439,
+        "noise_level": 0.3973967462487833,
+        "temperature": 0.15206034893520148,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.6609171270752957,
+        "num_knots": 0.45850462079628634,
+        "plan_horizon": 0.3503766638350627,
+        "noise_level": 0.1947934924975666,
+        "temperature": 0.6804023262346763,
+        "spline_type": 0.16120592619792468
+      }
+    },
+    {
+      "index": 13,
+      "params": {
+        "num_samples": 287,
+        "num_knots": 7,
+        "plan_horizon": 0.5841528452493243,
+        "noise_level": 0.345500014122265,
+        "temperature": 0.05846642595078559,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.5417499199680681,
+        "num_knots": 0.7655455835650143,
+        "plan_horizon": 0.40593263607046337,
+        "noise_level": 0.09100002824452999,
+        "temperature": 0.056442839671903916,
+        "spline_type": 0.4514041447443235
+      }
+    },
+    {
+      "index": 14,
+      "params": {
+        "num_samples": 147,
+        "num_knots": 8,
+        "plan_horizon": 0.6059654544280726,
+        "noise_level": 0.6646928619185173,
+        "temperature": 0.079556558841223,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.29999242881200333,
+        "num_knots": 0.9893116178963703,
+        "plan_horizon": 0.43709350632581806,
+        "noise_level": 0.7293857238370346,
+        "temperature": 0.19704372560815325,
+        "spline_type": 0.5666516885740092
+      }
+    },
+    {
+      "index": 15,
+      "params": {
+        "num_samples": 511,
+        "num_knots": 3,
+        "plan_horizon": 0.9508214669600064,
+        "noise_level": 0.7909136229408521,
+        "temperature": 0.10245977658335437,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.749095517351664,
+        "num_knots": 0.11222988092072754,
+        "plan_horizon": 0.929744952800009,
+        "noise_level": 0.9818272458817042,
+        "temperature": 0.349731843889029,
+        "spline_type": 0.5938465129497543
+      }
+    },
+    {
+      "index": 16,
+      "params": {
+        "num_samples": 105,
+        "num_knots": 3,
+        "plan_horizon": 0.9426158215157614,
+        "noise_level": 0.36841872332681347,
+        "temperature": 0.1966385325950381,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.17757984637882546,
+        "num_knots": 0.18562653314537608,
+        "plan_horizon": 0.9180226021653736,
+        "noise_level": 0.13683744665362693,
+        "temperature": 0.977590217300254,
+        "spline_type": 0.6831432154080757
+      }
+    },
+    {
+      "index": 17,
+      "params": {
+        "num_samples": 760,
+        "num_knots": 6,
+        "plan_horizon": 0.9334325994901751,
+        "noise_level": 0.6022755584331296,
+        "temperature": 0.19059164758249164,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.8922733637432848,
+        "num_knots": 0.6845677405954883,
+        "plan_horizon": 0.9049037135573932,
+        "noise_level": 0.6045511168662594,
+        "temperature": 0.937277650549944,
+        "spline_type": 0.24494694473819656
+      }
+    },
+    {
+      "index": 18,
+      "params": {
+        "num_samples": 327,
+        "num_knots": 8,
+        "plan_horizon": 0.6770828585996582,
+        "noise_level": 0.6899451102031787,
+        "temperature": 0.11194068246650928,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.587954814867808,
+        "num_knots": 0.9479357719620524,
+        "plan_horizon": 0.5386897979995118,
+        "noise_level": 0.7798902204063575,
+        "temperature": 0.41293788311006174,
+        "spline_type": 0.1508890851550887
+      }
+    },
+    {
+      "index": 19,
+      "params": {
+        "num_samples": 158,
+        "num_knots": 2,
+        "plan_horizon": 0.6703851620119994,
+        "noise_level": 0.3220531807273015,
+        "temperature": 0.1246320657373203,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.32698678989168545,
+        "num_knots": 0.0306002129965305,
+        "plan_horizon": 0.529121660017142,
+        "noise_level": 0.04410636145460295,
+        "temperature": 0.4975471049154686,
+        "spline_type": 0.8544908594111458
+      }
+    },
+    {
+      "index": 20,
+      "params": {
+        "num_samples": 142,
+        "num_knots": 8,
+        "plan_horizon": 0.9967359061913017,
+        "noise_level": 0.3482739272467421,
+        "temperature": 0.0970656024015007,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.2881308930424341,
+        "num_knots": 0.9207142902689753,
+        "plan_horizon": 0.9953370088447168,
+        "noise_level": 0.09654785449348427,
+        "temperature": 0.3137706826766712,
+        "spline_type": 0.9154103782971638
+      }
+    },
+    {
+      "index": 21,
+      "params": {
+        "num_samples": 937,
+        "num_knots": 6,
+        "plan_horizon": 0.8391522965497218,
+        "noise_level": 0.6808455021490722,
+        "temperature": 0.18330131621961404,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.9680404764639178,
+        "num_knots": 0.5898163828640899,
+        "plan_horizon": 0.7702175664996025,
+        "noise_level": 0.7616910042981444,
+        "temperature": 0.8886754414640933,
+        "spline_type": 0.2830512336418518
+      }
+    },
+    {
+      "index": 22,
+      "params": {
+        "num_samples": 74,
+        "num_knots": 6,
+        "plan_horizon": 0.8224586967029441,
+        "noise_level": 0.30848969783683233,
+        "temperature": 0.1272071238020232,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.054685872088869485,
+        "num_knots": 0.6696984595241825,
+        "plan_horizon": 0.7463695667184918,
+        "noise_level": 0.01697939567366473,
+        "temperature": 0.5147141586801545,
+        "spline_type": 0.6198313081621883
+      }
+    },
+    {
+      "index": 23,
+      "params": {
+        "num_samples": 68,
+        "num_knots": 5,
+        "plan_horizon": 0.8749918648453383,
+        "noise_level": 0.483014501877297,
+        "temperature": 0.10920749378715768,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.022269197263266805,
+        "num_knots": 0.5663616678175329,
+        "plan_horizon": 0.8214169497790547,
+        "noise_level": 0.3660290037545941,
+        "temperature": 0.3947166252477178,
+        "spline_type": 0.31260310193407354
+      }
+    },
+    {
+      "index": 24,
+      "params": {
+        "num_samples": 241,
+        "num_knots": 4,
+        "plan_horizon": 0.7275889313656767,
+        "noise_level": 0.5218496241183861,
+        "temperature": 0.07580961269298171,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.4784408351877403,
+        "num_knots": 0.2678319774515786,
+        "plan_horizon": 0.6108413305223954,
+        "noise_level": 0.44369924823677226,
+        "temperature": 0.17206408461987802,
+        "spline_type": 0.9403569199836672
+      }
+    },
+    {
+      "index": 25,
+      "params": {
+        "num_samples": 189,
+        "num_knots": 4,
+        "plan_horizon": 0.5230307234127072,
+        "noise_level": 0.6687669382341834,
+        "temperature": 0.17535080096898548,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.39054838289430194,
+        "num_knots": 0.3854697163955459,
+        "plan_horizon": 0.3186153191610104,
+        "noise_level": 0.737533876468367,
+        "temperature": 0.8356720064599031,
+        "spline_type": 0.022201225081177316
+      }
+    },
+    {
+      "index": 26,
+      "params": {
+        "num_samples": 139,
+        "num_knots": 4,
+        "plan_horizon": 0.42111904233403846,
+        "noise_level": 0.7526398836612187,
+        "temperature": 0.11839698185389598,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.2804522449209026,
+        "num_knots": 0.35491591463523053,
+        "plan_horizon": 0.1730272033343407,
+        "noise_level": 0.9052797673224373,
+        "temperature": 0.4559798790259731,
+        "spline_type": 0.2559120215688852
+      }
+    },
+    {
+      "index": 27,
+      "params": {
+        "num_samples": 479,
+        "num_knots": 7,
+        "plan_horizon": 0.7208330761601859,
+        "noise_level": 0.6132404427996966,
+        "temperature": 0.0944647607522311,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.7259382053017046,
+        "num_knots": 0.799485202012223,
+        "plan_horizon": 0.6011901088002656,
+        "noise_level": 0.6264808855993932,
+        "temperature": 0.2964317383482073,
+        "spline_type": 0.34560883066272685
+      }
+    },
+    {
+      "index": 28,
+      "params": {
+        "num_samples": 164,
+        "num_knots": 6,
+        "plan_horizon": 0.9062496519640633,
+        "noise_level": 0.5891007766795983,
+        "temperature": 0.08960398070730677,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.3399645132079421,
+        "num_knots": 0.7405555823922637,
+        "plan_horizon": 0.8660709313772332,
+        "noise_level": 0.5782015533591965,
+        "temperature": 0.2640265380487117,
+        "spline_type": 0.27229621256312325
+      }
+    },
+    {
+      "index": 29,
+      "params": {
+        "num_samples": 298,
+        "num_knots": 3,
+        "plan_horizon": 0.5015096282824892,
+        "noise_level": 0.7400228187786249,
+        "temperature": 0.15537655832639907,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.5546472296169941,
+        "num_knots": 0.13922274634712586,
+        "plan_horizon": 0.28787089754641326,
+        "noise_level": 0.8800456375572496,
+        "temperature": 0.7025103888426605,
+        "spline_type": 0.7128690194316147
+      }
+    },
+    {
+      "index": 30,
+      "params": {
+        "num_samples": 220,
+        "num_knots": 5,
+        "plan_horizon": 0.5689126601173992,
+        "noise_level": 0.7999276931112596,
+        "temperature": 0.1404778195103299,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.44577050250307454,
+        "num_knots": 0.4775218869929722,
+        "plan_horizon": 0.384160943024856,
+        "noise_level": 0.9998553862225191,
+        "temperature": 0.6031854634021993,
+        "spline_type": 0.6933978661176943
+      }
+    },
+    {
+      "index": 31,
+      "params": {
+        "num_samples": 427,
+        "num_knots": 6,
+        "plan_horizon": 0.4872794290956758,
+        "noise_level": 0.5520679306905347,
+        "temperature": 0.1871449071099281,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.6841529015736533,
+        "num_knots": 0.649661498670723,
+        "plan_horizon": 0.26754204156525113,
+        "noise_level": 0.5041358613810694,
+        "temperature": 0.9142993807328538,
+        "spline_type": 0.6673203044263548
+      }
+    },
+    {
+      "index": 32,
+      "params": {
+        "num_samples": 65,
+        "num_knots": 5,
+        "plan_horizon": 0.44146309745265294,
+        "noise_level": 0.33773979894935724,
+        "temperature": 0.17382668245948493,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.006478997646182356,
+        "num_knots": 0.5030332777014187,
+        "plan_horizon": 0.20209013921807567,
+        "noise_level": 0.07547959789871454,
+        "temperature": 0.8255112163965661,
+        "spline_type": 0.9723581577402856
+      }
+    },
+    {
+      "index": 33,
+      "params": {
+        "num_samples": 86,
+        "num_knots": 3,
+        "plan_horizon": 0.3731068017758207,
+        "noise_level": 0.7076024502892224,
+        "temperature": 0.06793519288833365,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.1052263058091989,
+        "num_knots": 0.1957190976346543,
+        "plan_horizon": 0.10443828825117239,
+        "noise_level": 0.8152049005784447,
+        "temperature": 0.11956795258889096,
+        "spline_type": 0.5334972698792332
+      }
+    },
+    {
+      "index": 34,
+      "params": {
+        "num_samples": 171,
+        "num_knots": 7,
+        "plan_horizon": 0.5386976086074209,
+        "noise_level": 0.4608310808968623,
+        "temperature": 0.15839505705398577,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.35486160746858986,
+        "num_knots": 0.8519286676155456,
+        "plan_horizon": 0.34099658372488706,
+        "noise_level": 0.32166216179372464,
+        "temperature": 0.7226337136932383,
+        "spline_type": 0.8398265600701326
+      }
+    },
+    {
+      "index": 35,
+      "params": {
+        "num_samples": 206,
+        "num_knots": 5,
+        "plan_horizon": 0.45199626347788485,
+        "noise_level": 0.659050072931089,
+        "temperature": 0.14359598290216688,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.42081343260333404,
+        "num_knots": 0.438889619378848,
+        "plan_horizon": 0.21713751925412125,
+        "noise_level": 0.718100145862178,
+        "temperature": 0.623973219347779,
+        "spline_type": 0.994823877027532
+      }
+    },
+    {
+      "index": 36,
+      "params": {
+        "num_samples": 586,
+        "num_knots": 7,
+        "plan_horizon": 0.6454425630132254,
+        "noise_level": 0.5477852596450453,
+        "temperature": 0.060405545585856715,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.7986708223950142,
+        "num_knots": 0.8278428545801048,
+        "plan_horizon": 0.4934893757331793,
+        "noise_level": 0.4955705192900907,
+        "temperature": 0.06937030390571143,
+        "spline_type": 0.20983391708273066
+      }
+    },
+    {
+      "index": 37,
+      "params": {
+        "num_samples": 528,
+        "num_knots": 4,
+        "plan_horizon": 0.858252386791144,
+        "noise_level": 0.3310977185560819,
+        "temperature": 0.12915677241009993,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.7613908612043173,
+        "num_knots": 0.33705305625712145,
+        "plan_horizon": 0.7975034097016344,
+        "noise_level": 0.06219543711216385,
+        "temperature": 0.5277118160673328,
+        "spline_type": 0.7208869888252768
+      }
+    },
+    {
+      "index": 38,
+      "params": {
+        "num_samples": 978,
+        "num_knots": 3,
+        "plan_horizon": 0.7999693871387878,
+        "noise_level": 0.7341762238210081,
+        "temperature": 0.1636740733366918,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.9832409988847588,
+        "num_knots": 0.20322513879162984,
+        "plan_horizon": 0.7142419816268399,
+        "noise_level": 0.8683524476420162,
+        "temperature": 0.7578271555779451,
+        "spline_type": 0.41662005842701527
+      }
+    },
+    {
+      "index": 39,
+      "params": {
+        "num_samples": 267,
+        "num_knots": 3,
+        "plan_horizon": 0.4046612202810055,
+        "noise_level": 0.3623698023949486,
+        "temperature": 0.050429741194777646,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.5151238467175726,
+        "num_knots": 0.15269764376914668,
+        "plan_horizon": 0.14951602897286498,
+        "noise_level": 0.12473960478989721,
+        "temperature": 0.002864941298517618,
+        "spline_type": 0.4960930585925971
+      }
+    },
+    {
+      "index": 40,
+      "params": {
+        "num_samples": 189,
+        "num_knots": 5,
+        "plan_horizon": 0.6371589071174887,
+        "noise_level": 0.7284144299353126,
+        "temperature": 0.1913185785476783,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.3908547860150839,
+        "num_knots": 0.49966040177875226,
+        "plan_horizon": 0.4816555815964125,
+        "noise_level": 0.8568288598706251,
+        "temperature": 0.9421238569845221,
+        "spline_type": 0.8931866039563723
+      }
+    },
+    {
+      "index": 41,
+      "params": {
+        "num_samples": 720,
+        "num_knots": 2,
+        "plan_horizon": 0.5573830051786256,
+        "noise_level": 0.3763925642664213,
+        "temperature": 0.18494002523938163,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.8728693764100871,
+        "num_knots": 0.04046671919251485,
+        "plan_horizon": 0.36769000739803664,
+        "noise_level": 0.15278512853284262,
+        "temperature": 0.899600168262544,
+        "spline_type": 0.3388953396395341
+      }
+    },
+    {
+      "index": 42,
+      "params": {
+        "num_samples": 99,
+        "num_knots": 6,
+        "plan_horizon": 0.9213948572930457,
+        "noise_level": 0.588191327241496,
+        "temperature": 0.14408516113499442,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.15595617250103663,
+        "num_knots": 0.6924950255669167,
+        "plan_horizon": 0.8877069389900655,
+        "noise_level": 0.5763826544829922,
+        "temperature": 0.6272344075666294,
+        "spline_type": 0.0993068294747154
+      }
+    },
+    {
+      "index": 43,
+      "params": {
+        "num_samples": 346,
+        "num_knots": 5,
+        "plan_horizon": 0.8359048000804803,
+        "noise_level": 0.5393085274786064,
+        "temperature": 0.07346969810613238,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.6087064090564213,
+        "num_knots": 0.5498048080582466,
+        "plan_horizon": 0.7655782858292577,
+        "noise_level": 0.47861705495721274,
+        "temperature": 0.15646465404088247,
+        "spline_type": 0.3892987283576513
+      }
+    },
+    {
+      "index": 44,
+      "params": {
+        "num_samples": 830,
+        "num_knots": 2,
+        "plan_horizon": 0.3257091932493363,
+        "noise_level": 0.630909098018567,
+        "temperature": 0.14711068255707016,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.9241994376911328,
+        "num_knots": 0.07300822865495109,
+        "plan_horizon": 0.036727418927623254,
+        "noise_level": 0.6618181960371339,
+        "temperature": 0.6474045503804676,
+        "spline_type": 0.40236780761888113
+      }
+    },
+    {
+      "index": 45,
+      "params": {
+        "num_samples": 635,
+        "num_knots": 7,
+        "plan_horizon": 0.6518705470002261,
+        "noise_level": 0.6947522065629452,
+        "temperature": 0.17834889962154504,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.8276973252159837,
+        "num_knots": 0.8780485531008876,
+        "plan_horizon": 0.502672210000323,
+        "noise_level": 0.7895044131258905,
+        "temperature": 0.8556593308103003,
+        "spline_type": 0.6449020495348968
+      }
+    },
+    {
+      "index": 46,
+      "params": {
+        "num_samples": 376,
+        "num_knots": 5,
+        "plan_horizon": 0.708971443119027,
+        "noise_level": 0.6455195343412685,
+        "temperature": 0.16862693111033492,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.6389052430581331,
+        "num_knots": 0.43090137332059153,
+        "plan_horizon": 0.5842449187414672,
+        "noise_level": 0.691039068682537,
+        "temperature": 0.7908462074022327,
+        "spline_type": 0.7802816612443407
+      }
+    },
+    {
+      "index": 47,
+      "params": {
+        "num_samples": 116,
+        "num_knots": 6,
+        "plan_horizon": 0.47229898426415584,
+        "noise_level": 0.7670120634678258,
+        "temperature": 0.16091596806829855,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.2159745910553605,
+        "num_knots": 0.6344099871309317,
+        "plan_horizon": 0.2461414060916512,
+        "noise_level": 0.9340241269356516,
+        "temperature": 0.7394397871219902,
+        "spline_type": 0.45351926181413493
+      }
+    },
+    {
+      "index": 48,
+      "params": {
+        "num_samples": 110,
+        "num_knots": 3,
+        "plan_horizon": 0.8844915664422002,
+        "noise_level": 0.43414123829386614,
+        "temperature": 0.19464978345147382,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.19499981130949737,
+        "num_knots": 0.24941286083006844,
+        "plan_horizon": 0.8349879520602861,
+        "noise_level": 0.2682824765877323,
+        "temperature": 0.9643318896764921,
+        "spline_type": 0.581012875226225
+      }
+    },
+    {
+      "index": 49,
+      "params": {
+        "num_samples": 88,
+        "num_knots": 4,
+        "plan_horizon": 0.415810407446882,
+        "noise_level": 0.4920093589764577,
+        "temperature": 0.17066683117135129,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.11300582686936413,
+        "num_knots": 0.3605041447739043,
+        "plan_horizon": 0.16544343920983148,
+        "noise_level": 0.3840187179529155,
+        "temperature": 0.8044455411423418,
+        "spline_type": 0.503779733924174
+      }
+    },
+    {
+      "index": 50,
+      "params": {
+        "num_samples": 465,
+        "num_knots": 8,
+        "plan_horizon": 0.3451429832866433,
+        "noise_level": 0.6401242103873368,
+        "temperature": 0.13906133129435244,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.7156543840424736,
+        "num_knots": 0.9609370753696659,
+        "plan_horizon": 0.0644899761237761,
+        "noise_level": 0.6802484207746736,
+        "temperature": 0.593742208629016,
+        "spline_type": 0.18331375130265445
+      }
+    },
+    {
+      "index": 51,
+      "params": {
+        "num_samples": 361,
+        "num_knots": 3,
+        "plan_horizon": 0.7454419759008404,
+        "noise_level": 0.6255617406521694,
+        "temperature": 0.10103757418541745,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.6238051587466167,
+        "num_knots": 0.08975152311379138,
+        "plan_horizon": 0.6363456798583434,
+        "noise_level": 0.651123481304339,
+        "temperature": 0.34025049456944967,
+        "spline_type": 0.9613463754765879
+      }
+    },
+    {
+      "index": 52,
+      "params": {
+        "num_samples": 992,
+        "num_knots": 6,
+        "plan_horizon": 0.7624384012704148,
+        "noise_level": 0.3059413015520723,
+        "temperature": 0.0917905424404807,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.9885332855045671,
+        "num_knots": 0.7058941678199165,
+        "plan_horizon": 0.6606262875291641,
+        "noise_level": 0.011882603104144532,
+        "temperature": 0.27860361626987123,
+        "spline_type": 0.11663086574834479
+      }
+    },
+    {
+      "index": 53,
+      "params": {
+        "num_samples": 81,
+        "num_knots": 5,
+        "plan_horizon": 0.7505223795669189,
+        "noise_level": 0.44148303035987424,
+        "temperature": 0.13498331774876277,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.08654585011909667,
+        "num_knots": 0.5373135426841331,
+        "plan_horizon": 0.6436033993813128,
+        "noise_level": 0.28296606071974856,
+        "temperature": 0.5665554516584184,
+        "spline_type": 0.7534770834183153
+      }
+    },
+    {
+      "index": 54,
+      "params": {
+        "num_samples": 545,
+        "num_knots": 2,
+        "plan_horizon": 0.6266260156095036,
+        "noise_level": 0.6095698512630311,
+        "temperature": 0.08551319131917692,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.7725430129527271,
+        "num_knots": 0.047857742163358925,
+        "plan_horizon": 0.4666085937278624,
+        "noise_level": 0.6191397025260622,
+        "temperature": 0.2367546087945127,
+        "spline_type": 0.7461947985993689
+      }
+    },
+    {
+      "index": 55,
+      "params": {
+        "num_samples": 122,
+        "num_knots": 6,
+        "plan_horizon": 0.3936732652310065,
+        "noise_level": 0.7563590303317593,
+        "temperature": 0.11609211853696955,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.23329714556220554,
+        "num_knots": 0.7300918884964965,
+        "plan_horizon": 0.1338189503300093,
+        "noise_level": 0.9127180606635187,
+        "temperature": 0.4406141235797969,
+        "spline_type": 0.29870478762580616
+      }
+    },
+    {
+      "index": 56,
+      "params": {
+        "num_samples": 665,
+        "num_knots": 6,
+        "plan_horizon": 0.4802992071819121,
+        "noise_level": 0.4766734487161559,
+        "temperature": 0.17991937101018657,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.8443829798623192,
+        "num_knots": 0.595121373230617,
+        "plan_horizon": 0.25757029597416015,
+        "noise_level": 0.3533468974323118,
+        "temperature": 0.8661291400679104,
+        "spline_type": 0.19136470656882587
+      }
+    },
+    {
+      "index": 57,
+      "params": {
+        "num_samples": 232,
+        "num_knots": 7,
+        "plan_horizon": 0.3645183849324053,
+        "noise_level": 0.38354675424333196,
+        "temperature": 0.053544099499111486,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.46456259680713374,
+        "num_knots": 0.8967983079430932,
+        "plan_horizon": 0.09216912133200757,
+        "noise_level": 0.167093508486664,
+        "temperature": 0.023627329994076567,
+        "spline_type": 0.871974379993359
+      }
+    },
+    {
+      "index": 58,
+      "params": {
+        "num_samples": 388,
+        "num_knots": 7,
+        "plan_horizon": 0.9790657610194171,
+        "noise_level": 0.42176155926375486,
+        "temperature": 0.19811236565874746,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.650224581983578,
+        "num_knots": 0.8730237911112615,
+        "plan_horizon": 0.9700939443134532,
+        "noise_level": 0.2435231185275097,
+        "temperature": 0.9874157710583161,
+        "spline_type": 0.5539226166322827
+      }
+    },
+    {
+      "index": 59,
+      "params": {
+        "num_samples": 862,
+        "num_knots": 4,
+        "plan_horizon": 0.7779266893006034,
+        "noise_level": 0.7822881724754587,
+        "temperature": 0.10807799555700451,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.9379432088298988,
+        "num_knots": 0.2886296927617189,
+        "plan_horizon": 0.6827524132865764,
+        "noise_level": 0.9645763449509174,
+        "temperature": 0.3871866370466966,
+        "spline_type": 0.8887002771343689
+      }
+    },
+    {
+      "index": 60,
+      "params": {
+        "num_samples": 747,
+        "num_knots": 7,
+        "plan_horizon": 0.9598373062943004,
+        "noise_level": 0.7025001973219114,
+        "temperature": 0.07078538551816539,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.8862378089504178,
+        "num_knots": 0.7798847177131388,
+        "plan_horizon": 0.942624723277572,
+        "noise_level": 0.8050003946438227,
+        "temperature": 0.13856923678776922,
+        "spline_type": 0.056276001628629
+      }
+    },
+    {
+      "index": 61,
+      "params": {
+        "num_samples": 268,
+        "num_knots": 7,
+        "plan_horizon": 0.3128560441404618,
+        "noise_level": 0.3895536547588224,
+        "temperature": 0.13277188668537557,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.5158748707738058,
+        "num_knots": 0.7932174549646699,
+        "plan_horizon": 0.018365777343516892,
+        "noise_level": 0.17910730951764486,
+        "temperature": 0.5518125779025037,
+        "spline_type": 0.6373366351087247
+      }
+    },
+    {
+      "index": 62,
+      "params": {
+        "num_samples": 127,
+        "num_knots": 3,
+        "plan_horizon": 0.3073806102340171,
+        "noise_level": 0.5756778817613166,
+        "temperature": 0.12150327546114757,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.2462179844118192,
+        "num_knots": 0.17055193687674633,
+        "plan_horizon": 0.010543728905738733,
+        "noise_level": 0.5513557635226334,
+        "temperature": 0.47668850307431704,
+        "spline_type": 0.4716781761395175
+      }
+    },
+    {
+      "index": 63,
+      "params": {
+        "num_samples": 251,
+        "num_knots": 4,
+        "plan_horizon": 0.8070933650875634,
+        "noise_level": 0.5127277474218492,
+        "temperature": 0.09592431547463928,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.49238685505096996,
+        "num_knots": 0.39261567201638914,
+        "plan_horizon": 0.7244190929822334,
+        "noise_level": 0.42545549484369855,
+        "temperature": 0.30616210316426185,
+        "spline_type": 0.08306596668244479
+      }
+    },
+    {
+      "index": 64,
+      "params": {
+        "num_samples": 441,
+        "num_knots": 2,
+        "plan_horizon": 0.6795745556232458,
+        "noise_level": 0.676740168578023,
+        "temperature": 0.1833299241150002,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.6958024837700841,
+        "num_knots": 0.008323429416888021,
+        "plan_horizon": 0.5422493651760655,
+        "noise_level": 0.7534803371560461,
+        "temperature": 0.8888661607666678,
+        "spline_type": 0.5517127415313278
+      }
+    },
+    {
+      "index": 65,
+      "params": {
+        "num_samples": 165,
+        "num_knots": 8,
+        "plan_horizon": 0.5870268489276478,
+        "noise_level": 0.6285537549221821,
+        "temperature": 0.07318844181634399,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.34238662354213717,
+        "num_knots": 0.9622359778561951,
+        "plan_horizon": 0.41003835561092533,
+        "noise_level": 0.6571075098443643,
+        "temperature": 0.15458961210895988,
+        "spline_type": 0.4298509035973971
+      }
+    },
+    {
+      "index": 66,
+      "params": {
+        "num_samples": 451,
+        "num_knots": 4,
+        "plan_horizon": 0.6088278908742635,
+        "noise_level": 0.3255601841481319,
+        "temperature": 0.060345274928491094,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.7044102130193289,
+        "num_knots": 0.3068526041786874,
+        "plan_horizon": 0.44118270124894793,
+        "noise_level": 0.05112036829626391,
+        "temperature": 0.06896849952327393,
+        "spline_type": 0.6558530944203552
+      }
+    },
+    {
+      "index": 67,
+      "params": {
+        "num_samples": 109,
+        "num_knots": 6,
+        "plan_horizon": 0.5344546224864294,
+        "noise_level": 0.38837727858152765,
+        "temperature": 0.12182380001421589,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.19043083591013002,
+        "num_knots": 0.7230493613414121,
+        "plan_horizon": 0.3349351749806135,
+        "noise_level": 0.1767545571630553,
+        "temperature": 0.47882533342810585,
+        "spline_type": 0.8253189138801739
+      }
+    },
+    {
+      "index": 68,
+      "params": {
+        "num_samples": 562,
+        "num_knots": 3,
+        "plan_horizon": 0.6179423853140529,
+        "noise_level": 0.7319607075887058,
+        "temperature": 0.08074801477202902,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.7837245169262262,
+        "num_knots": 0.09029225687571024,
+        "plan_horizon": 0.45420340759150424,
+        "noise_level": 0.8639214151774116,
+        "temperature": 0.2049867651468601,
+        "spline_type": 0.8787890912059465
+      }
+    },
+    {
+      "index": 69,
+      "params": {
+        "num_samples": 260,
+        "num_knots": 7,
+        "plan_horizon": 0.7781012578804684,
+        "noise_level": 0.5463736271244205,
+        "temperature": 0.15973262712792885,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.5054010705881073,
+        "num_knots": 0.8788983316586485,
+        "plan_horizon": 0.6830017969720977,
+        "noise_level": 0.49274725424884097,
+        "temperature": 0.7315508475195255,
+        "spline_type": 0.19881495548358744
+      }
+    },
+    {
+      "index": 70,
+      "params": {
+        "num_samples": 396,
+        "num_knots": 7,
+        "plan_horizon": 0.9537065503143507,
+        "noise_level": 0.48602215018358746,
+        "temperature": 0.11272718825864324,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.6576450927982372,
+        "num_knots": 0.8236286217549381,
+        "plan_horizon": 0.9338665004490726,
+        "noise_level": 0.37204430036717495,
+        "temperature": 0.41818125505762155,
+        "spline_type": 0.14958795064015495
+      }
+    },
+    {
+      "index": 71,
+      "params": {
+        "num_samples": 242,
+        "num_knots": 5,
+        "plan_horizon": 0.5101980936138053,
+        "noise_level": 0.6466883395748253,
+        "temperature": 0.07527135166191179,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.4796582512673202,
+        "num_knots": 0.4966851965651492,
+        "plan_horizon": 0.30028299087686483,
+        "noise_level": 0.6933766791496507,
+        "temperature": 0.1684756777460786,
+        "spline_type": 0.4927051172116041
+      }
+    },
+    {
+      "index": 72,
+      "params": {
+        "num_samples": 73,
+        "num_knots": 3,
+        "plan_horizon": 0.8446767181843682,
+        "noise_level": 0.42164786409298216,
+        "temperature": 0.17681400185727036,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.0469205046492811,
+        "num_knots": 0.12473954996396748,
+        "plan_horizon": 0.7781095974062404,
+        "noise_level": 0.2432957281859643,
+        "temperature": 0.8454266790484691,
+        "spline_type": 0.974070052401423
+      }
+    },
+    {
+      "index": 73,
+      "params": {
+        "num_samples": 99,
+        "num_knots": 4,
+        "plan_horizon": 0.6417905481780772,
+        "noise_level": 0.5054495187338532,
+        "temperature": 0.07029526265019384,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.15830073994336016,
+        "num_knots": 0.3785787465662978,
+        "plan_horizon": 0.4882722116829676,
+        "noise_level": 0.4108990374677065,
+        "temperature": 0.1353017510012922,
+        "spline_type": 0.507218641714758
+      }
+    },
+    {
+      "index": 74,
+      "params": {
+        "num_samples": 425,
+        "num_knots": 4,
+        "plan_horizon": 0.6467936485926826,
+        "noise_level": 0.5922619354501512,
+        "temperature": 0.13877193732097612,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.6829780376111637,
+        "num_knots": 0.33466774548280004,
+        "plan_horizon": 0.4954194979895466,
+        "noise_level": 0.5845238709003023,
+        "temperature": 0.591812915473174,
+        "spline_type": 0.1858778789209218
+      }
+    },
+    {
+      "index": 75,
+      "params": {
+        "num_samples": 471,
+        "num_knots": 5,
+        "plan_horizon": 0.7248497584439937,
+        "noise_level": 0.3124750759428895,
+        "temperature": 0.05862303506703774,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.719577509661776,
+        "num_knots": 0.4457489997268115,
+        "plan_horizon": 0.6069282263485625,
+        "noise_level": 0.02495015188577893,
+        "temperature": 0.05748690044691827,
+        "spline_type": 0.03923011199157462
+      }
+    },
+    {
+      "index": 76,
+      "params": {
+        "num_samples": 604,
+        "num_knots": 4,
+        "plan_horizon": 0.6736759822343432,
+        "noise_level": 0.3738805270343616,
+        "temperature": 0.06143455337962864,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.8096340620784106,
+        "num_knots": 0.2764499004471098,
+        "plan_horizon": 0.5338228317633474,
+        "noise_level": 0.14776105406872317,
+        "temperature": 0.07623035586419087,
+        "spline_type": 0.7034294412651881
+      }
+    },
+    {
+      "index": 77,
+      "params": {
+        "num_samples": 730,
+        "num_knots": 5,
+        "plan_horizon": 0.5658189899185024,
+        "noise_level": 0.4483277893805235,
+        "temperature": 0.1203671617142495,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.8779720646084885,
+        "num_knots": 0.5043788784659562,
+        "plan_horizon": 0.37974141416928925,
+        "noise_level": 0.296655578761047,
+        "temperature": 0.4691144114283299,
+        "spline_type": 0.6680676445163348
+      }
+    },
+    {
+      "index": 78,
+      "params": {
+        "num_samples": 172,
+        "num_knots": 8,
+        "plan_horizon": 0.7524218034619821,
+        "noise_level": 0.5801236115475517,
+        "temperature": 0.1366611713043413,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.35722885889122064,
+        "num_knots": 0.9501587543410542,
+        "plan_horizon": 0.6463168620885459,
+        "noise_level": 0.5602472230951033,
+        "temperature": 0.577741142028942,
+        "spline_type": 0.5669786259813663
+      }
+    },
+    {
+      "index": 79,
+      "params": {
+        "num_samples": 271,
+        "num_knots": 6,
+        "plan_horizon": 0.3827457237894978,
+        "noise_level": 0.6120001397188464,
+        "temperature": 0.11938446059221355,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.5207333282114718,
+        "num_knots": 0.6425782682807188,
+        "plan_horizon": 0.11820817684213972,
+        "noise_level": 0.6240002794376927,
+        "temperature": 0.46256307061475693,
+        "spline_type": 0.22348708128022532
+      }
+    },
+    {
+      "index": 80,
+      "params": {
+        "num_samples": 116,
+        "num_knots": 6,
+        "plan_horizon": 0.985379034930105,
+        "noise_level": 0.49246790122475026,
+        "temperature": 0.14431039956998148,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.21430645897482348,
+        "num_knots": 0.628119461042864,
+        "plan_horizon": 0.9791129070430072,
+        "noise_level": 0.3849358024495005,
+        "temperature": 0.6287359971332098,
+        "spline_type": 0.5927814439487811
+      }
+    },
+    {
+      "index": 81,
+      "params": {
+        "num_samples": 897,
+        "num_knots": 7,
+        "plan_horizon": 0.42001010303842984,
+        "noise_level": 0.5135350327618609,
+        "temperature": 0.1436572874061315,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.9520884414503297,
+        "num_knots": 0.7808359856932475,
+        "plan_horizon": 0.1714430043406141,
+        "noise_level": 0.4270700655237217,
+        "temperature": 0.6243819160408767,
+        "spline_type": 0.24138957646974762
+      }
+    },
+    {
+      "index": 82,
+      "params": {
+        "num_samples": 76,
+        "num_knots": 5,
+        "plan_horizon": 0.8795016789163581,
+        "noise_level": 0.5184615009939761,
+        "temperature": 0.10771892150309206,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.05962605560547005,
+        "num_knots": 0.4347566465157183,
+        "plan_horizon": 0.827859541309083,
+        "noise_level": 0.4369230019879524,
+        "temperature": 0.3847928100206137,
+        "spline_type": 0.7030413627413501
+      }
+    },
+    {
+      "index": 83,
+      "params": {
+        "num_samples": 105,
+        "num_knots": 6,
+        "plan_horizon": 0.6991771260483981,
+        "noise_level": 0.5657997227372885,
+        "temperature": 0.06315709094443278,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.17820526837583045,
+        "num_knots": 0.7076950488157211,
+        "plan_horizon": 0.5702530372119974,
+        "noise_level": 0.531599445474577,
+        "temperature": 0.08771393962955179,
+        "spline_type": 0.9322940334490908
+      }
+    },
+    {
+      "index": 84,
+      "params": {
+        "num_samples": 72,
+        "num_knots": 8,
+        "plan_horizon": 0.7322638131540764,
+        "noise_level": 0.6430500958450094,
+        "temperature": 0.1531081727022645,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.041732771280782135,
+        "num_knots": 0.9770726461759363,
+        "plan_horizon": 0.6175197330772522,
+        "noise_level": 0.6861001916900189,
+        "temperature": 0.6873878180150965,
+        "spline_type": 0.8630354990187928
+      }
+    },
+    {
+      "index": 85,
+      "params": {
+        "num_samples": 135,
+        "num_knots": 4,
+        "plan_horizon": 0.46858246982998664,
+        "noise_level": 0.5079567311213227,
+        "temperature": 0.09559112910221174,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.2698724163255348,
+        "num_knots": 0.3129076270128371,
+        "plan_horizon": 0.24083209975712383,
+        "noise_level": 0.4159134622426453,
+        "temperature": 0.3039408606814115,
+        "spline_type": 0.679637729007331
+      }
+    },
+    {
+      "index": 86,
+      "params": {
+        "num_samples": 167,
+        "num_knots": 4,
+        "plan_horizon": 0.3160522895694996,
+        "noise_level": 0.6507855980934754,
+        "temperature": 0.08812372601236616,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.345283569414959,
+        "num_knots": 0.400089050373688,
+        "plan_horizon": 0.022931842242142265,
+        "noise_level": 0.7015711961869506,
+        "temperature": 0.25415817341577435,
+        "spline_type": 0.7632840843372035
+      }
+    },
+    {
+      "index": 87,
+      "params": {
+        "num_samples": 140,
+        "num_knots": 8,
+        "plan_horizon": 0.8955575086565521,
+        "noise_level": 0.6931344513290859,
+        "temperature": 0.11100901009186599,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.2812198530478018,
+        "num_knots": 0.9229517404363174,
+        "plan_horizon": 0.8507964409379316,
+        "noise_level": 0.7862689026581718,
+        "temperature": 0.4067267339457732,
+        "spline_type": 0.6410737102736146
+      }
+    },
+    {
+      "index": 88,
+      "params": {
+        "num_samples": 97,
+        "num_knots": 7,
+        "plan_horizon": 0.5445348352534096,
+        "noise_level": 0.7992247836092639,
+        "temperature": 0.16203672114243228,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.15033762081489319,
+        "num_knots": 0.7967480463224476,
+        "plan_horizon": 0.3493354789334423,
+        "noise_level": 0.9984495672185277,
+        "temperature": 0.7469114742828816,
+        "spline_type": 0.7258558718182686
+      }
+    },
+    {
+      "index": 89,
+      "params": {
+        "num_samples": 77,
+        "num_knots": 3,
+        "plan_horizon": 0.976351043281418,
+        "noise_level": 0.5593788866417457,
+        "temperature": 0.15459169318856647,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.06450677708771174,
+        "num_knots": 0.20314646209064582,
+        "plan_horizon": 0.9662157761163116,
+        "noise_level": 0.5187577732834914,
+        "temperature": 0.6972779545904431,
+        "spline_type": 0.9188802557553876
+      }
+    },
+    {
+      "index": 90,
+      "params": {
+        "num_samples": 460,
+        "num_knots": 6,
+        "plan_horizon": 0.4734665986839208,
+        "noise_level": 0.49707115643559596,
+        "temperature": 0.09595391852645116,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.7115092974405545,
+        "num_knots": 0.6512956525717228,
+        "plan_horizon": 0.24780942669131553,
+        "noise_level": 0.3941423128711919,
+        "temperature": 0.3063594568430077,
+        "spline_type": 0.6187008769669338
+      }
+    },
+    {
+      "index": 91,
+      "params": {
+        "num_samples": 85,
+        "num_knots": 8,
+        "plan_horizon": 0.5984564068179914,
+        "noise_level": 0.38173553642645763,
+        "temperature": 0.1647642301211008,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.10357658686716201,
+        "num_knots": 0.930143925387686,
+        "plan_horizon": 0.4263662954542735,
+        "noise_level": 0.16347107285291523,
+        "temperature": 0.7650948674740052,
+        "spline_type": 0.6589666332400353
+      }
+    },
+    {
+      "index": 92,
+      "params": {
+        "num_samples": 180,
+        "num_knots": 3,
+        "plan_horizon": 0.8183741723116431,
+        "noise_level": 0.4174657566430177,
+        "temperature": 0.1632258866119734,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.3731494416605004,
+        "num_knots": 0.23156258248685685,
+        "plan_horizon": 0.7405345318737759,
+        "noise_level": 0.23493151328603545,
+        "temperature": 0.7548392440798226,
+        "spline_type": 0.020137963219598536
+      }
+    },
+    {
+      "index": 93,
+      "params": {
+        "num_samples": 94,
+        "num_knots": 3,
+        "plan_horizon": 0.7894636775207847,
+        "noise_level": 0.7537351590890726,
+        "temperature": 0.16887973381833232,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.13826479352096158,
+        "num_knots": 0.19567604064120983,
+        "plan_horizon": 0.6992338250296926,
+        "noise_level": 0.9074703181781452,
+        "temperature": 0.7925315587888822,
+        "spline_type": 0.39572473784464984
+      }
+    },
+    {
+      "index": 94,
+      "params": {
+        "num_samples": 274,
+        "num_knots": 2,
+        "plan_horizon": 0.5692043457025302,
+        "noise_level": 0.5850501266035595,
+        "temperature": 0.1719484283499051,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.5244427594712279,
+        "num_knots": 0.055221950277669705,
+        "plan_horizon": 0.38457763671790024,
+        "noise_level": 0.5701002532071191,
+        "temperature": 0.8129895223327005,
+        "spline_type": 0.401646316213917
+      }
+    },
+    {
+      "index": 95,
+      "params": {
+        "num_samples": 614,
+        "num_knots": 4,
+        "plan_horizon": 0.5903597212303493,
+        "noise_level": 0.502786137916709,
+        "temperature": 0.15121674382648792,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.815439363292407,
+        "num_knots": 0.4068745508250634,
+        "plan_horizon": 0.4147996017576419,
+        "noise_level": 0.4055722758334181,
+        "temperature": 0.674778292176586,
+        "spline_type": 0.03706530543707966
+      }
+    },
+    {
+      "index": 96,
+      "params": {
+        "num_samples": 517,
+        "num_knots": 4,
+        "plan_horizon": 0.7315295234868098,
+        "noise_level": 0.6951049533370011,
+        "temperature": 0.1939812302536264,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.753288448395449,
+        "num_knots": 0.32243582133830373,
+        "plan_horizon": 0.6164707478382998,
+        "noise_level": 0.7902099066740021,
+        "temperature": 0.9598748683575091,
+        "spline_type": 0.24635020723222575
+      }
+    },
+    {
+      "index": 97,
+      "params": {
+        "num_samples": 953,
+        "num_knots": 2,
+        "plan_horizon": 0.911159494429548,
+        "noise_level": 0.5225525750664527,
+        "temperature": 0.09371407376870083,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.9739451894247029,
+        "num_knots": 0.07481529740622384,
+        "plan_horizon": 0.8730849920422116,
+        "noise_level": 0.4451051501329054,
+        "temperature": 0.29142715845800543,
+        "spline_type": 0.3904277953608532
+      }
+    },
+    {
+      "index": 98,
+      "params": {
+        "num_samples": 91,
+        "num_knots": 6,
+        "plan_horizon": 0.9900317918361894,
+        "noise_level": 0.5979119352793703,
+        "temperature": 0.17576889953875258,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.1285619450237793,
+        "num_knots": 0.5922300673252411,
+        "plan_horizon": 0.9857597026231277,
+        "noise_level": 0.5958238705587404,
+        "temperature": 0.8384593302583503,
+        "spline_type": 0.06916793799257334
+      }
+    },
+    {
+      "index": 99,
+      "params": {
+        "num_samples": 351,
+        "num_knots": 5,
+        "plan_horizon": 0.35918531870411247,
+        "noise_level": 0.7448910424463644,
+        "temperature": 0.09875803445329463,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.6139571744283244,
+        "num_knots": 0.5723999342539161,
+        "plan_horizon": 0.08455045529158924,
+        "noise_level": 0.8897820848927289,
+        "temperature": 0.32505356302196414,
+        "spline_type": 0.46211012924449324
+      }
+    },
+    {
+      "index": 100,
+      "params": {
+        "num_samples": 255,
+        "num_knots": 8,
+        "plan_horizon": 0.5532050213050541,
+        "noise_level": 0.7019717782327354,
+        "temperature": 0.13935797735775846,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.4987475359656949,
+        "num_knots": 0.955337273879449,
+        "plan_horizon": 0.36172145900722014,
+        "noise_level": 0.8039435564654708,
+        "temperature": 0.5957198490517228,
+        "spline_type": 0.16486787258915728
+      }
+    },
+    {
+      "index": 101,
+      "params": {
+        "num_samples": 238,
+        "num_knots": 3,
+        "plan_horizon": 0.3800387381287189,
+        "noise_level": 0.31962400700642446,
+        "temperature": 0.1490901579251675,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.4744255750805654,
+        "num_knots": 0.2251912667496245,
+        "plan_horizon": 0.11434105446959843,
+        "noise_level": 0.039248014012848984,
+        "temperature": 0.6606010528344499,
+        "spline_type": 0.8972931999455677
+      }
+    },
+    {
+      "index": 102,
+      "params": {
+        "num_samples": 505,
+        "num_knots": 6,
+        "plan_horizon": 0.7941352109408131,
+        "noise_level": 0.3508191860740943,
+        "temperature": 0.15051017484432289,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.7450391192461606,
+        "num_knots": 0.6073902217201275,
+        "plan_horizon": 0.7059074442011617,
+        "noise_level": 0.10163837214818863,
+        "temperature": 0.6700678322954857,
+        "spline_type": 0.910997895878576
+      }
+    },
+    {
+      "index": 103,
+      "params": {
+        "num_samples": 88,
+        "num_knots": 2,
+        "plan_horizon": 0.45976495437837067,
+        "noise_level": 0.44971482367696414,
+        "temperature": 0.15814844583201693,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.11287809616675379,
+        "num_knots": 0.06349074022154168,
+        "plan_horizon": 0.22823564911195815,
+        "noise_level": 0.29942964735392835,
+        "temperature": 0.7209896388801127,
+        "spline_type": 0.2810642466129721
+      }
+    },
+    {
+      "index": 104,
+      "params": {
+        "num_samples": 182,
+        "num_knots": 3,
+        "plan_horizon": 0.6837728604269372,
+        "noise_level": 0.49113741592717,
+        "temperature": 0.1677415049267127,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.37787265288820315,
+        "num_knots": 0.1937996010523934,
+        "plan_horizon": 0.5482469434670532,
+        "noise_level": 0.38227483185434,
+        "temperature": 0.7849433661780844,
+        "spline_type": 0.08934245921455171
+      }
+    },
+    {
+      "index": 105,
+      "params": {
+        "num_samples": 355,
+        "num_knots": 7,
+        "plan_horizon": 0.6613255095118835,
+        "noise_level": 0.6234036862826162,
+        "temperature": 0.12684718828511832,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.6180448020625523,
+        "num_knots": 0.7877441492862132,
+        "plan_horizon": 0.5161792993026907,
+        "noise_level": 0.6468073725652325,
+        "temperature": 0.5123145885674554,
+        "spline_type": 0.7123382685416145
+      }
+    },
+    {
+      "index": 106,
+      "params": {
+        "num_samples": 903,
+        "num_knots": 4,
+        "plan_horizon": 0.9238445858552833,
+        "noise_level": 0.4733861366346099,
+        "temperature": 0.09730077897434994,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.9547128245631827,
+        "num_knots": 0.28263926393411803,
+        "plan_horizon": 0.8912065512218332,
+        "noise_level": 0.3467722732692198,
+        "temperature": 0.3153385264956662,
+        "spline_type": 0.11747647145605683
+      }
+    },
+    {
+      "index": 107,
+      "params": {
+        "num_samples": 683,
+        "num_knots": 4,
+        "plan_horizon": 0.8800653370899438,
+        "noise_level": 0.4791328547414891,
+        "temperature": 0.1557308027826812,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.8537797381948761,
+        "num_knots": 0.3564605312388481,
+        "plan_horizon": 0.8286647672713483,
+        "noise_level": 0.3582657094829782,
+        "temperature": 0.7048720185512078,
+        "spline_type": 0.9825670681383618
+      }
+    },
+    {
+      "index": 108,
+      "params": {
+        "num_samples": 102,
+        "num_knots": 7,
+        "plan_horizon": 0.4918979932550481,
+        "noise_level": 0.5707326633995782,
+        "temperature": 0.19193093968791114,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.166516671059393,
+        "num_knots": 0.8687245595454784,
+        "plan_horizon": 0.2741399903643545,
+        "noise_level": 0.5414653267991563,
+        "temperature": 0.9462062645860742,
+        "spline_type": 0.7428399838231791
+      }
+    },
+    {
+      "index": 109,
+      "params": {
+        "num_samples": 106,
+        "num_knots": 5,
+        "plan_horizon": 0.6709673476742191,
+        "noise_level": 0.3013570992289223,
+        "temperature": 0.1701939263188575,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.18213318639703077,
+        "num_knots": 0.5097147868127194,
+        "plan_horizon": 0.529953353820313,
+        "noise_level": 0.002714198457844599,
+        "temperature": 0.8012928421257166,
+        "spline_type": 0.7706554933803358
+      }
+    },
+    {
+      "index": 110,
+      "params": {
+        "num_samples": 124,
+        "num_knots": 5,
+        "plan_horizon": 0.8879880142801675,
+        "noise_level": 0.45308780594468256,
+        "temperature": 0.19055167486469243,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.2388804665332262,
+        "num_knots": 0.535109419963505,
+        "plan_horizon": 0.8399828775430964,
+        "noise_level": 0.3061756118893652,
+        "temperature": 0.9370111657646162,
+        "spline_type": 0.31690268411591704
+      }
+    },
+    {
+      "index": 111,
+      "params": {
+        "num_samples": 122,
+        "num_knots": 5,
+        "plan_horizon": 0.7600781938309346,
+        "noise_level": 0.7256232465016677,
+        "temperature": 0.10041261664356343,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.23415382793452932,
+        "num_knots": 0.4572048439683657,
+        "plan_horizon": 0.6572545626156209,
+        "noise_level": 0.8512464930033352,
+        "temperature": 0.33608411095708945,
+        "spline_type": 0.21671537750314007
+      }
+    },
+    {
+      "index": 112,
+      "params": {
+        "num_samples": 376,
+        "num_knots": 6,
+        "plan_horizon": 0.5216210644860778,
+        "noise_level": 0.3070454321609512,
+        "temperature": 0.07210819936937908,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.6388645635540916,
+        "num_knots": 0.6599924493390483,
+        "plan_horizon": 0.31660152069439695,
+        "noise_level": 0.014090864321902395,
+        "temperature": 0.1473879957958605,
+        "spline_type": 0.5776866504922031
+      }
+    },
+    {
+      "index": 113,
+      "params": {
+        "num_samples": 148,
+        "num_knots": 2,
+        "plan_horizon": 0.7021862567272489,
+        "noise_level": 0.7588375968961358,
+        "temperature": 0.08042477317606608,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.30305573397010005,
+        "num_knots": 0.08235266447893913,
+        "plan_horizon": 0.5745517953246413,
+        "noise_level": 0.9176751937922716,
+        "temperature": 0.2028318211737738,
+        "spline_type": 0.3221603241436263
+      }
+    },
+    {
+      "index": 114,
+      "params": {
+        "num_samples": 752,
+        "num_knots": 5,
+        "plan_horizon": 0.8495907376911009,
+        "noise_level": 0.5940010803538609,
+        "temperature": 0.16547928886892677,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.8887442851604654,
+        "num_knots": 0.5563528490345738,
+        "plan_horizon": 0.7851296252730013,
+        "noise_level": 0.5880021607077217,
+        "temperature": 0.7698619257928448,
+        "spline_type": 0.8006453444741871
+      }
+    },
+    {
+      "index": 115,
+      "params": {
+        "num_samples": 497,
+        "num_knots": 5,
+        "plan_horizon": 0.8261292223064989,
+        "noise_level": 0.7100233578145652,
+        "temperature": 0.14722798842786863,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.7390389666447168,
+        "num_knots": 0.5217076591259994,
+        "plan_horizon": 0.7516131747235698,
+        "noise_level": 0.8200467156291305,
+        "temperature": 0.6481865895191241,
+        "spline_type": 0.31055907866194893
+      }
+    },
+    {
+      "index": 116,
+      "params": {
+        "num_samples": 663,
+        "num_knots": 3,
+        "plan_horizon": 0.8711256134457592,
+        "noise_level": 0.6257688279904683,
+        "temperature": 0.11059154191779397,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.8431069707591478,
+        "num_knots": 0.1349831907189735,
+        "plan_horizon": 0.8158937334939417,
+        "noise_level": 0.6515376559809366,
+        "temperature": 0.403943612785293,
+        "spline_type": 0.0718934231921233
+      }
+    },
+    {
+      "index": 117,
+      "params": {
+        "num_samples": 214,
+        "num_knots": 4,
+        "plan_horizon": 0.45788749623045755,
+        "noise_level": 0.6797293186111986,
+        "temperature": 0.1572795607906594,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.43507523558943034,
+        "num_knots": 0.34306783820093056,
+        "plan_horizon": 0.2255535660435108,
+        "noise_level": 0.7594586372223973,
+        "temperature": 0.7151970719377293,
+        "spline_type": 0.8991563408085377
+      }
+    },
+    {
+      "index": 118,
+      "params": {
+        "num_samples": 671,
+        "num_knots": 7,
+        "plan_horizon": 0.7724110533941371,
+        "noise_level": 0.46181506398978006,
+        "temperature": 0.17359024416159574,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.8476590346151318,
+        "num_knots": 0.8321496508092937,
+        "plan_horizon": 0.6748729334201959,
+        "noise_level": 0.32363012797956014,
+        "temperature": 0.8239349610773047,
+        "spline_type": 0.6104533045828662
+      }
+    },
+    {
+      "index": 119,
+      "params": {
+        "num_samples": 206,
+        "num_knots": 2,
+        "plan_horizon": 0.8113499192971758,
+        "noise_level": 0.7715590691806684,
+        "temperature": 0.13023406133625043,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.42247721725391046,
+        "num_knots": 0.049247531663629565,
+        "plan_horizon": 0.7304998847102513,
+        "noise_level": 0.9431181383613368,
+        "temperature": 0.5348937422416694,
+        "spline_type": 0.9682163123888915
+      }
+    },
+    {
+      "index": 120,
+      "params": {
+        "num_samples": 264,
+        "num_knots": 6,
+        "plan_horizon": 0.3324310131199415,
+        "noise_level": 0.4397292374960276,
+        "temperature": 0.11525233991454001,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.5116285095866057,
+        "num_knots": 0.6107373742383461,
+        "plan_horizon": 0.04633001874277356,
+        "noise_level": 0.27945847499205523,
+        "temperature": 0.43501559943026663,
+        "spline_type": 0.23272988439855624
+      }
+    },
+    {
+      "index": 121,
+      "params": {
+        "num_samples": 388,
+        "num_knots": 8,
+        "plan_horizon": 0.8317418826450085,
+        "noise_level": 0.4644882248130332,
+        "temperature": 0.06550918597903432,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.6501002421510964,
+        "num_knots": 0.9178531559563753,
+        "plan_horizon": 0.7596312609214407,
+        "noise_level": 0.32897644962606637,
+        "temperature": 0.10339457319356211,
+        "spline_type": 0.4859407097714753
+      }
+    },
+    {
+      "index": 122,
+      "params": {
+        "num_samples": 198,
+        "num_knots": 6,
+        "plan_horizon": 0.9219363701622216,
+        "noise_level": 0.6591637920607569,
+        "temperature": 0.19849461069277768,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.40728668982458427,
+        "num_knots": 0.7451273226574324,
+        "plan_horizon": 0.8884805288031737,
+        "noise_level": 0.7183275841215138,
+        "temperature": 0.9899640712851844,
+        "spline_type": 0.2813741385143437
+      }
+    },
+    {
+      "index": 123,
+      "params": {
+        "num_samples": 119,
+        "num_knots": 2,
+        "plan_horizon": 0.6526460072980682,
+        "noise_level": 0.41201004200240815,
+        "temperature": 0.1326066285980791,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.22270363220726072,
+        "num_knots": 0.0361179202400151,
+        "plan_horizon": 0.5037800104258118,
+        "noise_level": 0.22402008400481635,
+        "temperature": 0.5507108573205272,
+        "spline_type": 0.10654546102869511
+      }
+    },
+    {
+      "index": 124,
+      "params": {
+        "num_samples": 438,
+        "num_knots": 6,
+        "plan_horizon": 0.7472746682758574,
+        "noise_level": 0.5229003740705687,
+        "temperature": 0.05313436978734944,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.6936334788484138,
+        "num_knots": 0.6210817154892418,
+        "plan_horizon": 0.6389638118226535,
+        "noise_level": 0.44580074814113724,
+        "temperature": 0.020895798582329598,
+        "spline_type": 0.3540773975007091
+      }
+    },
+    {
+      "index": 125,
+      "params": {
+        "num_samples": 126,
+        "num_knots": 4,
+        "plan_horizon": 0.9472794645342035,
+        "noise_level": 0.7681149860846055,
+        "temperature": 0.13196194736376438,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.24449223783441812,
+        "num_knots": 0.25810124764063047,
+        "plan_horizon": 0.9246849493345765,
+        "noise_level": 0.9362299721692111,
+        "temperature": 0.5464129824250956,
+        "spline_type": 0.8142808954197855
+      }
+    },
+    {
+      "index": 126,
+      "params": {
+        "num_samples": 90,
+        "num_knots": 6,
+        "plan_horizon": 0.8662472736750917,
+        "noise_level": 0.36239024897224303,
+        "temperature": 0.15339857853335004,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.12319352937429036,
+        "num_knots": 0.6861960528813167,
+        "plan_horizon": 0.8089246766787026,
+        "noise_level": 0.12478049794448613,
+        "temperature": 0.6893238568890002,
+        "spline_type": 0.25937152841635785
+      }
+    },
+    {
+      "index": 127,
+      "params": {
+        "num_samples": 151,
+        "num_knots": 6,
+        "plan_horizon": 0.36217031375434405,
+        "noise_level": 0.7407724517276191,
+        "temperature": 0.11375377990444652,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.3087939806497051,
+        "num_knots": 0.6957162026493703,
+        "plan_horizon": 0.08881473393477725,
+        "noise_level": 0.8815449034552381,
+        "temperature": 0.4250251993629767,
+        "spline_type": 0.8708767606529719
+      }
+    },
+    {
+      "index": 128,
+      "params": {
+        "num_samples": 363,
+        "num_knots": 7,
+        "plan_horizon": 0.9992680036587271,
+        "noise_level": 0.702381972184744,
+        "temperature": 0.09016620327614285,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.6261644376825837,
+        "num_knots": 0.7564655872176501,
+        "plan_horizon": 0.9989542909410387,
+        "noise_level": 0.804763944369488,
+        "temperature": 0.26777468850761893,
+        "spline_type": 0.12767383948429983
+      }
+    },
+    {
+      "index": 129,
+      "params": {
+        "num_samples": 724,
+        "num_knots": 3,
+        "plan_horizon": 0.4307841603340704,
+        "noise_level": 0.3760667535475744,
+        "temperature": 0.061780480173496646,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.8747263104998417,
+        "num_knots": 0.17822460658919356,
+        "plan_horizon": 0.1868345147629577,
+        "noise_level": 0.15213350709514886,
+        "temperature": 0.07853653448997759,
+        "spline_type": 0.38234544759288647
+      }
+    },
+    {
+      "index": 130,
+      "params": {
+        "num_samples": 217,
+        "num_knots": 7,
+        "plan_horizon": 0.855799022646077,
+        "noise_level": 0.747613960054529,
+        "temperature": 0.09291651137560492,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.44063778299912904,
+        "num_knots": 0.8197186181663091,
+        "plan_horizon": 0.7939986037801101,
+        "noise_level": 0.8952279201090579,
+        "temperature": 0.286110075837366,
+        "spline_type": 0.09817099591714794
+      }
+    },
+    {
+      "index": 131,
+      "params": {
+        "num_samples": 313,
+        "num_knots": 6,
+        "plan_horizon": 0.906927454418156,
+        "noise_level": 0.3503437448972759,
+        "temperature": 0.17847092189258695,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.5726190176223648,
+        "num_knots": 0.6692531331339964,
+        "plan_horizon": 0.8670392205973658,
+        "noise_level": 0.10068748979455178,
+        "temperature": 0.8564728126172463,
+        "spline_type": 0.7882822355054522
+      }
+    },
+    {
+      "index": 132,
+      "params": {
+        "num_samples": 70,
+        "num_knots": 4,
+        "plan_horizon": 0.6266596795104336,
+        "noise_level": 0.5754014081461516,
+        "temperature": 0.12617118459000926,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.030054674770576013,
+        "num_knots": 0.26687987214144804,
+        "plan_horizon": 0.4666566850149051,
+        "noise_level": 0.5508028162923033,
+        "temperature": 0.5078078972667281,
+        "spline_type": 0.7572237395723794
+      }
+    },
+    {
+      "index": 133,
+      "params": {
+        "num_samples": 292,
+        "num_knots": 7,
+        "plan_horizon": 0.7420413808779511,
+        "noise_level": 0.5307707961538375,
+        "temperature": 0.11750120340281817,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.5478473463477772,
+        "num_knots": 0.9018900735269847,
+        "plan_horizon": 0.6314876869685018,
+        "noise_level": 0.461541592307675,
+        "temperature": 0.45000802268545437,
+        "spline_type": 0.3664072850785535
+      }
+    },
+    {
+      "index": 134,
+      "params": {
+        "num_samples": 249,
+        "num_knots": 4,
+        "plan_horizon": 0.3212992535539324,
+        "noise_level": 0.545834084004047,
+        "temperature": 0.11608918726086968,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.4901061754771383,
+        "num_knots": 0.3862455676575818,
+        "plan_horizon": 0.03042750507704629,
+        "noise_level": 0.49166816800809404,
+        "temperature": 0.44059458173913113,
+        "spline_type": 0.9257683241447557
+      }
+    },
+    {
+      "index": 135,
+      "params": {
+        "num_samples": 963,
+        "num_knots": 5,
+        "plan_horizon": 0.44914323463465844,
+        "noise_level": 0.4287177179602202,
+        "temperature": 0.1916810453742251,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.9780298808012927,
+        "num_knots": 0.52837760145689,
+        "plan_horizon": 0.21306176376379782,
+        "noise_level": 0.2574354359204403,
+        "temperature": 0.9445403024948338,
+        "spline_type": 0.3404944497241555
+      }
+    },
+    {
+      "index": 136,
+      "params": {
+        "num_samples": 763,
+        "num_knots": 3,
+        "plan_horizon": 0.5788333949314217,
+        "noise_level": 0.6729928211523983,
+        "temperature": 0.10626802850139974,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.8936913420000983,
+        "num_knots": 0.1436026369719066,
+        "plan_horizon": 0.3983334213306024,
+        "noise_level": 0.7459856423047967,
+        "temperature": 0.37512019000933156,
+        "spline_type": 0.08229889766971639
+      }
+    },
+    {
+      "index": 137,
+      "params": {
+        "num_samples": 327,
+        "num_knots": 7,
+        "plan_horizon": 0.340416326690156,
+        "noise_level": 0.714271260689388,
+        "temperature": 0.0819953597295823,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.5877492178004855,
+        "num_knots": 0.8490287350622587,
+        "plan_horizon": 0.05773760955736574,
+        "noise_level": 0.828542521378776,
+        "temperature": 0.21330239819721536,
+        "spline_type": 0.8360958084432604
+      }
+    },
+    {
+      "index": 138,
+      "params": {
+        "num_samples": 284,
+        "num_knots": 7,
+        "plan_horizon": 0.7566253810989929,
+        "noise_level": 0.564995666715487,
+        "temperature": 0.14111554185220423,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.5378220936929092,
+        "num_knots": 0.8609680264070143,
+        "plan_horizon": 0.6523219729985613,
+        "noise_level": 0.529991333430974,
+        "temperature": 0.6074369456813614,
+        "spline_type": 0.8120813285757036
+      }
+    },
+    {
+      "index": 139,
+      "params": {
+        "num_samples": 132,
+        "num_knots": 5,
+        "plan_horizon": 0.39395489540753204,
+        "noise_level": 0.3966471588923477,
+        "temperature": 0.05487674259397071,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.26085995743703017,
+        "num_knots": 0.56526055295427,
+        "plan_horizon": 0.13422127915361717,
+        "noise_level": 0.19329431778469547,
+        "temperature": 0.032511617293138076,
+        "spline_type": 0.9464928933836156
+      }
+    },
+    {
+      "index": 140,
+      "params": {
+        "num_samples": 534,
+        "num_knots": 7,
+        "plan_horizon": 0.8404299621054867,
+        "noise_level": 0.7647313831242224,
+        "temperature": 0.08909519840841344,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.7654272876006429,
+        "num_knots": 0.8401821360256825,
+        "plan_horizon": 0.7720428030078383,
+        "noise_level": 0.9294627662484447,
+        "temperature": 0.26063465605608954,
+        "spline_type": 0.8558863743014516
+      }
+    },
+    {
+      "index": 141,
+      "params": {
+        "num_samples": 854,
+        "num_knots": 7,
+        "plan_horizon": 0.7174674088959674,
+        "noise_level": 0.6672160691192868,
+        "temperature": 0.07443249644909145,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.934572355346993,
+        "num_knots": 0.7689660238376129,
+        "plan_horizon": 0.596382012708525,
+        "noise_level": 0.7344321382385735,
+        "temperature": 0.16288330966060954,
+        "spline_type": 0.3022081863811628
+      }
+    },
+    {
+      "index": 142,
+      "params": {
+        "num_samples": 704,
+        "num_knots": 8,
+        "plan_horizon": 0.7686136024362451,
+        "noise_level": 0.6063886501934379,
+        "temperature": 0.05157579060470133,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.8647939283961166,
+        "num_knots": 0.9853322316466329,
+        "plan_horizon": 0.6694480034803503,
+        "noise_level": 0.6127773003868757,
+        "temperature": 0.010505270698008821,
+        "spline_type": 0.4827055165090788
+      }
+    },
+    {
+      "index": 143,
+      "params": {
+        "num_samples": 111,
+        "num_knots": 4,
+        "plan_horizon": 0.601975382159436,
+        "noise_level": 0.7503273531196577,
+        "temperature": 0.06903471958078249,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.1993869150166595,
+        "num_knots": 0.29660803219345705,
+        "plan_horizon": 0.4313934030849087,
+        "noise_level": 0.9006547062393154,
+        "temperature": 0.12689813053854987,
+        "spline_type": 0.6057986185907097
+      }
+    },
+    {
+      "index": 144,
+      "params": {
+        "num_samples": 78,
+        "num_knots": 2,
+        "plan_horizon": 0.5261402667374109,
+        "noise_level": 0.687139473030013,
+        "temperature": 0.10260615812689164,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.07272631405527806,
+        "num_knots": 0.04446324532919119,
+        "plan_horizon": 0.32305752391058695,
+        "noise_level": 0.774278946060026,
+        "temperature": 0.35070772084594415,
+        "spline_type": 0.372180553742423
+      }
+    },
+    {
+      "index": 145,
+      "params": {
+        "num_samples": 222,
+        "num_knots": 4,
+        "plan_horizon": 0.36772633703435964,
+        "noise_level": 0.3184966195416918,
+        "temperature": 0.0840750982874312,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.4484027845394721,
+        "num_knots": 0.3971330865452424,
+        "plan_horizon": 0.0967519100490852,
+        "noise_level": 0.03699323908338357,
+        "temperature": 0.22716732191620798,
+        "spline_type": 0.05333679187108802
+      }
+    },
+    {
+      "index": 146,
+      "params": {
+        "num_samples": 582,
+        "num_knots": 4,
+        "plan_horizon": 0.4380127874668359,
+        "noise_level": 0.4575828707670979,
+        "temperature": 0.1037383107116571,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.7964135483411086,
+        "num_knots": 0.252792662080384,
+        "plan_horizon": 0.19716112495262275,
+        "noise_level": 0.3151657415341958,
+        "temperature": 0.3582554047443806,
+        "spline_type": 0.13784006528796575
+      }
+    },
+    {
+      "index": 147,
+      "params": {
+        "num_samples": 64,
+        "num_knots": 8,
+        "plan_horizon": 0.40956675319881586,
+        "noise_level": 0.616558473199692,
+        "temperature": 0.10896334134851268,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.0015719000056614411,
+        "num_knots": 0.9761319992981959,
+        "plan_horizon": 0.15652393314116553,
+        "noise_level": 0.6331169463993841,
+        "temperature": 0.3930889423234178,
+        "spline_type": 0.6927097016838945
+      }
+    },
+    {
+      "index": 148,
+      "params": {
+        "num_samples": 421,
+        "num_knots": 5,
+        "plan_horizon": 0.7088995800099067,
+        "noise_level": 0.6598969797098688,
+        "temperature": 0.17914974771541553,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.6795954601657829,
+        "num_knots": 0.4829097429730691,
+        "plan_horizon": 0.5841422571570096,
+        "noise_level": 0.7197939594197376,
+        "temperature": 0.86099831810277,
+        "spline_type": 0.7410472816878941
+      }
+    },
+    {
+      "index": 149,
+      "params": {
+        "num_samples": 303,
+        "num_knots": 7,
+        "plan_horizon": 0.4091035020635912,
+        "noise_level": 0.6156484386610457,
+        "temperature": 0.18064985792546068,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.5606117645469049,
+        "num_knots": 0.7654648925436554,
+        "plan_horizon": 0.1558621458051303,
+        "noise_level": 0.6312968773220914,
+        "temperature": 0.8709990528364046,
+        "spline_type": 0.6333860286477776
+      }
+    },
+    {
+      "index": 150,
+      "params": {
+        "num_samples": 926,
+        "num_knots": 5,
+        "plan_horizon": 0.48170604297101083,
+        "noise_level": 0.7203354336640211,
+        "temperature": 0.1372852556032257,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.9637483353632235,
+        "num_knots": 0.48591714259679536,
+        "plan_horizon": 0.2595800613871584,
+        "noise_level": 0.8406708673280421,
+        "temperature": 0.5819017040215044,
+        "spline_type": 0.6837384457094465
+      }
+    },
+    {
+      "index": 151,
+      "params": {
+        "num_samples": 554,
+        "num_knots": 3,
+        "plan_horizon": 0.43213949965218357,
+        "noise_level": 0.36724629150458443,
+        "temperature": 0.14839612928194165,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.7784493249180126,
+        "num_knots": 0.1521653865359433,
+        "plan_horizon": 0.18877071378883364,
+        "noise_level": 0.13449258300916886,
+        "temperature": 0.6559741952129442,
+        "spline_type": 0.0548949376856347
+      }
+    },
+    {
+      "index": 152,
+      "params": {
+        "num_samples": 187,
+        "num_knots": 3,
+        "plan_horizon": 0.9417447103339758,
+        "noise_level": 0.794906414953132,
+        "temperature": 0.13408496644477358,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.38578891827572726,
+        "num_knots": 0.09676444526619038,
+        "plan_horizon": 0.9167781576199655,
+        "noise_level": 0.9898128299062638,
+        "temperature": 0.560566442965157,
+        "spline_type": 0.3449327044636182
+      }
+    },
+    {
+      "index": 153,
+      "params": {
+        "num_samples": 95,
+        "num_knots": 7,
+        "plan_horizon": 0.3988901265714125,
+        "noise_level": 0.6637906437254405,
+        "temperature": 0.1243673309768159,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.14360541353624937,
+        "num_knots": 0.8954210546531487,
+        "plan_horizon": 0.14127160938773212,
+        "noise_level": 0.727581287450881,
+        "temperature": 0.4957822065121059,
+        "spline_type": 0.18772270636107
+      }
+    },
+    {
+      "index": 154,
+      "params": {
+        "num_samples": 71,
+        "num_knots": 6,
+        "plan_horizon": 0.8996469766643302,
+        "noise_level": 0.7752858896777421,
+        "temperature": 0.1971399783352083,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.03518596054839476,
+        "num_knots": 0.634767341669281,
+        "plan_horizon": 0.8566385380919003,
+        "noise_level": 0.9505717793554842,
+        "temperature": 0.9809331889013886,
+        "spline_type": 0.780205011691546
+      }
+    },
+    {
+      "index": 155,
+      "params": {
+        "num_samples": 404,
+        "num_knots": 4,
+        "plan_horizon": 0.6574842715893728,
+        "noise_level": 0.3416212509977449,
+        "temperature": 0.07615433781304373,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.6641931470440264,
+        "num_knots": 0.3679724397636772,
+        "plan_horizon": 0.510691816556247,
+        "noise_level": 0.0832425019954898,
+        "temperature": 0.1743622520869582,
+        "spline_type": 0.1588260798281464
+      }
+    },
+    {
+      "index": 156,
+      "params": {
+        "num_samples": 144,
+        "num_knots": 3,
+        "plan_horizon": 0.49995105459364664,
+        "noise_level": 0.3078340848887992,
+        "temperature": 0.057011001866016875,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.2929185278120578,
+        "num_knots": 0.1287235670846009,
+        "plan_horizon": 0.28564436370520946,
+        "noise_level": 0.015668169777598405,
+        "temperature": 0.04674001244011248,
+        "spline_type": 0.2931338375573932
+      }
+    },
+    {
+      "index": 157,
+      "params": {
+        "num_samples": 490,
+        "num_knots": 3,
+        "plan_horizon": 0.9393288671129334,
+        "noise_level": 0.4074668573193312,
+        "temperature": 0.0832647720349038,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.7341531126050538,
+        "num_knots": 0.24718337450405964,
+        "plan_horizon": 0.9133269530184763,
+        "noise_level": 0.21493371463866234,
+        "temperature": 0.22176514689935864,
+        "spline_type": 0.44365045264053976
+      }
+    },
+    {
+      "index": 158,
+      "params": {
+        "num_samples": 66,
+        "num_knots": 6,
+        "plan_horizon": 0.8625242619548887,
+        "noise_level": 0.529399669655987,
+        "temperature": 0.14595979229724185,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.01004269709988733,
+        "num_knots": 0.7373751204569634,
+        "plan_horizon": 0.803606088506984,
+        "noise_level": 0.458799339311974,
+        "temperature": 0.6397319486482789,
+        "spline_type": 0.013194506443357696
+      }
+    },
+    {
+      "index": 159,
+      "params": {
+        "num_samples": 83,
+        "num_knots": 3,
+        "plan_horizon": 0.6167591703229132,
+        "noise_level": 0.779525522420403,
+        "temperature": 0.06483134045197655,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.09178295280528603,
+        "num_knots": 0.17177686986497098,
+        "plan_horizon": 0.4525131004613045,
+        "noise_level": 0.9590510448408058,
+        "temperature": 0.098875603013177,
+        "spline_type": 0.890049332503872
+      }
+    },
+    {
+      "index": 160,
+      "params": {
+        "num_samples": 84,
+        "num_knots": 6,
+        "plan_horizon": 0.4801135968885935,
+        "noise_level": 0.6855691732001057,
+        "temperature": 0.19638610633488662,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.09720928820367575,
+        "num_knots": 0.7297342872824133,
+        "plan_horizon": 0.2573051384122765,
+        "noise_level": 0.7711383464002115,
+        "temperature": 0.9759073755659108,
+        "spline_type": 0.5428890913181483
+      }
+    },
+    {
+      "index": 161,
+      "params": {
+        "num_samples": 639,
+        "num_knots": 8,
+        "plan_horizon": 0.35244432462547304,
+        "noise_level": 0.43626970942918325,
+        "temperature": 0.08674363397735993,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.8297600081454515,
+        "num_knots": 0.9398423089252954,
+        "plan_horizon": 0.07492046375067576,
+        "noise_level": 0.2725394188583665,
+        "temperature": 0.24495755984906611,
+        "spline_type": 0.7320502954299563
+      }
+    },
+    {
+      "index": 162,
+      "params": {
+        "num_samples": 635,
+        "num_knots": 4,
+        "plan_horizon": 0.537903204688313,
+        "noise_level": 0.43186018687684496,
+        "temperature": 0.05400394112492725,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.8273828325845166,
+        "num_knots": 0.3501085767585899,
+        "plan_horizon": 0.3398617209833043,
+        "noise_level": 0.26372037375368995,
+        "temperature": 0.026692940832848316,
+        "spline_type": 0.834904333350711
+      }
+    },
+    {
+      "index": 163,
+      "params": {
+        "num_samples": 790,
+        "num_knots": 7,
+        "plan_horizon": 0.4205182079370777,
+        "noise_level": 0.7918827730469824,
+        "temperature": 0.18871405503487787,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.9063814631615642,
+        "num_knots": 0.8552085140861937,
+        "plan_horizon": 0.17216886848153962,
+        "noise_level": 0.9837655460939647,
+        "temperature": 0.9247603668991856,
+        "spline_type": 0.0008374767424886584
+      }
+    },
+    {
+      "index": 164,
+      "params": {
+        "num_samples": 153,
+        "num_knots": 3,
+        "plan_horizon": 0.5794664759216097,
+        "noise_level": 0.6024015898577426,
+        "temperature": 0.18573481580257978,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.3148711634890587,
+        "num_knots": 0.23650950611483756,
+        "plan_horizon": 0.39923782274515685,
+        "noise_level": 0.6048031797154853,
+        "temperature": 0.9048987720171984,
+        "spline_type": 0.5974207434287088
+      }
+    },
+    {
+      "index": 165,
+      "params": {
+        "num_samples": 81,
+        "num_knots": 7,
+        "plan_horizon": 0.32474020606572046,
+        "noise_level": 0.5384146913541608,
+        "temperature": 0.08627319074057575,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.08592988970565577,
+        "num_knots": 0.8850507111286844,
+        "plan_horizon": 0.03534315152245779,
+        "noise_level": 0.47682938270832154,
+        "temperature": 0.24182127160383832,
+        "spline_type": 0.6256874551437852
+      }
+    },
+    {
+      "index": 166,
+      "params": {
+        "num_samples": 226,
+        "num_knots": 7,
+        "plan_horizon": 0.6328062954158422,
+        "noise_level": 0.3280507945898719,
+        "temperature": 0.12362254218617617,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.4551730218452343,
+        "num_knots": 0.8042746546034706,
+        "plan_horizon": 0.4754375648797747,
+        "noise_level": 0.05610158917974388,
+        "temperature": 0.49081694790784103,
+        "spline_type": 0.5199762840791738
+      }
+    },
+    {
+      "index": 167,
+      "params": {
+        "num_samples": 822,
+        "num_knots": 5,
+        "plan_horizon": 0.7125222202538923,
+        "noise_level": 0.7347178995366643,
+        "temperature": 0.1290446343037404,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.9206956603270255,
+        "num_knots": 0.4293885683449994,
+        "plan_horizon": 0.5893174575055604,
+        "noise_level": 0.8694357990733286,
+        "temperature": 0.5269642286916028,
+        "spline_type": 0.5258855730190128
+      }
+    },
+    {
+      "index": 168,
+      "params": {
+        "num_samples": 114,
+        "num_knots": 6,
+        "plan_horizon": 0.3875203949500037,
+        "noise_level": 0.39000699849141923,
+        "temperature": 0.14237784772745476,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.20785689959887269,
+        "num_knots": 0.6769237257518983,
+        "plan_horizon": 0.12502913564286242,
+        "noise_level": 0.1800139969828385,
+        "temperature": 0.6158523181830318,
+        "spline_type": 0.5143788927589998
+      }
+    },
+    {
+      "index": 169,
+      "params": {
+        "num_samples": 998,
+        "num_knots": 4,
+        "plan_horizon": 0.6894422826120048,
+        "noise_level": 0.48010999821037514,
+        "temperature": 0.0789806871511401,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.9906721539650557,
+        "num_knots": 0.4162403748177716,
+        "plan_horizon": 0.5563461180171497,
+        "noise_level": 0.36021999642075037,
+        "temperature": 0.19320458100760063,
+        "spline_type": 0.8474092255429909
+      }
+    },
+    {
+      "index": 170,
+      "params": {
+        "num_samples": 873,
+        "num_knots": 6,
+        "plan_horizon": 0.34790608822463936,
+        "noise_level": 0.4153077309419254,
+        "temperature": 0.05060835926287132,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.9424243574644022,
+        "num_knots": 0.6930575706540546,
+        "plan_horizon": 0.06843726889234195,
+        "noise_level": 0.23061546188385082,
+        "temperature": 0.004055728419142098,
+        "spline_type": 0.26689761953662294
+      }
+    },
+    {
+      "index": 171,
+      "params": {
+        "num_samples": 203,
+        "num_knots": 3,
+        "plan_horizon": 0.5032100983747723,
+        "noise_level": 0.785361286652859,
+        "temperature": 0.11818378321437142,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.41689606919576444,
+        "num_knots": 0.15794351157762584,
+        "plan_horizon": 0.2903001405353889,
+        "noise_level": 0.9707225733057179,
+        "temperature": 0.4545585547624761,
+        "spline_type": 0.2099482744933362
+      }
+    },
+    {
+      "index": 172,
+      "params": {
+        "num_samples": 192,
+        "num_knots": 5,
+        "plan_horizon": 0.5143726830828811,
+        "noise_level": 0.5550216216206867,
+        "temperature": 0.0678568800001326,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.39656866237955846,
+        "num_knots": 0.46345378662042136,
+        "plan_horizon": 0.30624669011840155,
+        "noise_level": 0.5100432432413734,
+        "temperature": 0.11904586666755056,
+        "spline_type": 0.45645207419287936
+      }
+    },
+    {
+      "index": 173,
+      "params": {
+        "num_samples": 535,
+        "num_knots": 4,
+        "plan_horizon": 0.3070302753511126,
+        "noise_level": 0.5880526153383931,
+        "temperature": 0.18441847373661158,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.7658319105383122,
+        "num_knots": 0.36360731531017787,
+        "plan_horizon": 0.01004325050158944,
+        "noise_level": 0.5761052306767862,
+        "temperature": 0.8961231582440768,
+        "spline_type": 0.42202899407958944
+      }
+    },
+    {
+      "index": 174,
+      "params": {
+        "num_samples": 67,
+        "num_knots": 8,
+        "plan_horizon": 0.7845820184655705,
+        "noise_level": 0.5533385923215375,
+        "temperature": 0.16038914774254925,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.019115726185425404,
+        "num_knots": 0.9953214387590981,
+        "plan_horizon": 0.6922600263793864,
+        "noise_level": 0.506677184643075,
+        "temperature": 0.7359276516169948,
+        "spline_type": 0.142724131707711
+      }
+    },
+    {
+      "index": 175,
+      "params": {
+        "num_samples": 160,
+        "num_knots": 3,
+        "plan_horizon": 0.9826990928776524,
+        "noise_level": 0.40492984300091417,
+        "temperature": 0.1748754054507255,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.33103011382711023,
+        "num_knots": 0.10430487392683271,
+        "plan_horizon": 0.9752844183966465,
+        "noise_level": 0.2098596860018284,
+        "temperature": 0.8325027030048364,
+        "spline_type": 0.11236796423289064
+      }
+    },
+    {
+      "index": 176,
+      "params": {
+        "num_samples": 335,
+        "num_knots": 3,
+        "plan_horizon": 0.9683845811421838,
+        "noise_level": 0.35613524061485374,
+        "temperature": 0.16695803364162454,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.5974771406690418,
+        "num_knots": 0.11698542523036319,
+        "plan_horizon": 0.9548351159174057,
+        "noise_level": 0.11227048122970747,
+        "temperature": 0.7797202242774969,
+        "spline_type": 0.2502050337557408
+      }
+    },
+    {
+      "index": 177,
+      "params": {
+        "num_samples": 319,
+        "num_knots": 2,
+        "plan_horizon": 0.6368720899347423,
+        "noise_level": 0.6387094924738559,
+        "temperature": 0.07771941180942285,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.5791220366132506,
+        "num_knots": 0.0013297357381230395,
+        "plan_horizon": 0.48124584276391763,
+        "noise_level": 0.6774189849477118,
+        "temperature": 0.18479607872948564,
+        "spline_type": 0.024532121368683844
+      }
+    },
+    {
+      "index": 178,
+      "params": {
+        "num_samples": 194,
+        "num_knots": 5,
+        "plan_horizon": 0.8224293627281458,
+        "noise_level": 0.34629806497231586,
+        "temperature": 0.19954268248107715,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.40017583489020525,
+        "num_knots": 0.5438576449917923,
+        "plan_horizon": 0.7463276610402084,
+        "noise_level": 0.0925961299446317,
+        "temperature": 0.9969512165405141,
+        "spline_type": 0.4476289755374014
+      }
+    },
+    {
+      "index": 179,
+      "params": {
+        "num_samples": 141,
+        "num_knots": 5,
+        "plan_horizon": 0.9313391011291665,
+        "noise_level": 0.7810584278908639,
+        "temperature": 0.1874114062852013,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.28564102804765396,
+        "num_knots": 0.43780110460534255,
+        "plan_horizon": 0.901913001613095,
+        "noise_level": 0.9621168557817277,
+        "temperature": 0.9160760419013421,
+        "spline_type": 0.9870123694934251
+      }
+    },
+    {
+      "index": 180,
+      "params": {
+        "num_samples": 288,
+        "num_knots": 2,
+        "plan_horizon": 0.8008304247387426,
+        "noise_level": 0.7265646627635629,
+        "temperature": 0.057171799963218556,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.5420919462160622,
+        "num_knots": 0.02415402138385863,
+        "plan_horizon": 0.7154720353410607,
+        "noise_level": 0.853129325527126,
+        "temperature": 0.04781199975479036,
+        "spline_type": 0.5815435895657941
+      }
+    },
+    {
+      "index": 181,
+      "params": {
+        "num_samples": 310,
+        "num_knots": 7,
+        "plan_horizon": 0.550545960675787,
+        "noise_level": 0.3650310948949026,
+        "temperature": 0.09925848810517202,
+        "spline_type": "zero"
+      },
+      "u": {
+        "num_samples": 0.5686848141061746,
+        "num_knots": 0.806328093789154,
+        "plan_horizon": 0.35792280096541,
+        "noise_level": 0.13006218978980522,
+        "temperature": 0.32838992070114664,
+        "spline_type": 0.17420013917505375
+      }
+    },
+    {
+      "index": 182,
+      "params": {
+        "num_samples": 130,
+        "num_knots": 5,
+        "plan_horizon": 0.9574393878099603,
+        "noise_level": 0.46900605609343915,
+        "temperature": 0.09106992979715045,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.2547276296037306,
+        "num_knots": 0.554622548406363,
+        "plan_horizon": 0.9391991254428005,
+        "noise_level": 0.33801211218687827,
+        "temperature": 0.273799531981003,
+        "spline_type": 0.9556302206349172
+      }
+    },
+    {
+      "index": 183,
+      "params": {
+        "num_samples": 158,
+        "num_knots": 3,
+        "plan_horizon": 0.30271924926262184,
+        "noise_level": 0.3320026451320511,
+        "temperature": 0.18152159663343465,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.3270411459748984,
+        "num_knots": 0.2166126924939672,
+        "plan_horizon": 0.0038846418037455175,
+        "noise_level": 0.06400529026410216,
+        "temperature": 0.8768106442228975,
+        "spline_type": 0.5582974904283177
+      }
+    },
+    {
+      "index": 184,
+      "params": {
+        "num_samples": 176,
+        "num_knots": 4,
+        "plan_horizon": 0.5575667530687678,
+        "noise_level": 0.5358106258879788,
+        "temperature": 0.1713566593895765,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.3650965690416063,
+        "num_knots": 0.3036565476221031,
+        "plan_horizon": 0.3679525043839541,
+        "noise_level": 0.4716212517759576,
+        "temperature": 0.8090443959305099,
+        "spline_type": 0.9402494745805491
+      }
+    },
+    {
+      "index": 185,
+      "params": {
+        "num_samples": 383,
+        "num_knots": 5,
+        "plan_horizon": 0.8059317678792819,
+        "noise_level": 0.3977186845592665,
+        "temperature": 0.1348715003060461,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.6453267456856138,
+        "num_knots": 0.4691365920674743,
+        "plan_horizon": 0.7227596683989742,
+        "noise_level": 0.19543736911853307,
+        "temperature": 0.5658100020403072,
+        "spline_type": 0.9980452027169269
+      }
+    },
+    {
+      "index": 186,
+      "params": {
+        "num_samples": 830,
+        "num_knots": 3,
+        "plan_horizon": 0.9168258242197203,
+        "noise_level": 0.3837434346736749,
+        "temperature": 0.12758292843457408,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.9241219968921562,
+        "num_knots": 0.18501123791134902,
+        "plan_horizon": 0.8811797488853146,
+        "noise_level": 0.16748686934734985,
+        "temperature": 0.5172195228971604,
+        "spline_type": 0.3342271157415297
+      }
+    },
+    {
+      "index": 187,
+      "params": {
+        "num_samples": 345,
+        "num_knots": 6,
+        "plan_horizon": 0.4476483689332515,
+        "noise_level": 0.6322158982117592,
+        "temperature": 0.10426096149063806,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.6076778161556732,
+        "num_knots": 0.7143745037455937,
+        "plan_horizon": 0.21092624133321644,
+        "noise_level": 0.6644317964235182,
+        "temperature": 0.3617397432709203,
+        "spline_type": 0.46888801534255514
+      }
+    },
+    {
+      "index": 188,
+      "params": {
+        "num_samples": 231,
+        "num_knots": 6,
+        "plan_horizon": 0.4885389463895316,
+        "noise_level": 0.44158089940781053,
+        "temperature": 0.19468115385635298,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.46290052795446157,
+        "num_knots": 0.5970032808480886,
+        "plan_horizon": 0.26934135198504516,
+        "noise_level": 0.2831617988156211,
+        "temperature": 0.9645410257090198,
+        "spline_type": 0.4153288454055689
+      }
+    },
+    {
+      "index": 189,
+      "params": {
+        "num_samples": 584,
+        "num_knots": 6,
+        "plan_horizon": 0.3344345498475768,
+        "noise_level": 0.6524122742221146,
+        "temperature": 0.10601438542566895,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.7974625868110501,
+        "num_knots": 0.5836582405800623,
+        "plan_horizon": 0.04919221406796685,
+        "noise_level": 0.7048245484442293,
+        "temperature": 0.3734292361711262,
+        "spline_type": 0.532045462061663
+      }
+    },
+    {
+      "index": 190,
+      "params": {
+        "num_samples": 789,
+        "num_knots": 2,
+        "plan_horizon": 0.9648879102136096,
+        "noise_level": 0.3364431454448377,
+        "temperature": 0.06717491697136324,
+        "spline_type": "linear"
+      },
+      "u": {
+        "num_samples": 0.9059598795190877,
+        "num_knots": 0.018033741801059225,
+        "plan_horizon": 0.9498398717337281,
+        "noise_level": 0.07288629088967544,
+        "temperature": 0.11449944647575491,
+        "spline_type": 0.4090067867238951
+      }
+    },
+    {
+      "index": 191,
+      "params": {
+        "num_samples": 1014,
+        "num_knots": 7,
+        "plan_horizon": 0.37312676904974573,
+        "noise_level": 0.7106460545175106,
+        "temperature": 0.18598543616895785,
+        "spline_type": "cubic"
+      },
+      "u": {
+        "num_samples": 0.9964063375398161,
+        "num_knots": 0.9102614673693049,
+        "plan_horizon": 0.1044668129282082,
+        "noise_level": 0.8212921090350214,
+        "temperature": 0.906569574459719,
+        "spline_type": 0.7918457855731864
+      }
+    }
+  ]
+}

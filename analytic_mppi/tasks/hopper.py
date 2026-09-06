@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import mujoco
 
-from .base import Task
+from .base import Task, soft_ramp
 
 
 _MODEL_PATH = Path(__file__).resolve().parent.parent / "envs" / "hopper" / "scene.xml"
@@ -27,8 +27,32 @@ class HopperTask(Task):
     # rarely binds but measurably prevents falls (see _control_fulfillment).
     cost_term_names_f = ["height_fulfillment", "orientation_fulfillment", "velocity_fulfillment", "control_fulfillment"]
 
-    def __init__(self, *, target_velocity: float = 1.0, target_height: float = 1.0):
+    def __init__(self, *, target_velocity: float = 1.0, target_height: float = 1.0,
+                 atom_soft_floor: float = 0.0, atom_tail_tau: float = 0.5,
+                 orientation_floor: float = 0.6,
+                 height_weight: float = 10.0, orientation_weight: float = 50.0,
+                 velocity_weight: float = 5.0, control_weight: float = 0.3):
         super().__init__(_MODEL_PATH)
+        # Vanilla (normal-mode) quadratic cost weights. Exposed as ctor kwargs so a
+        # config's task.kwargs can tune them when searching for a working vanilla-MPPI
+        # setup; defaults reproduce the original hardcoded values exactly.
+        self.height_weight = float(height_weight)
+        self.orientation_weight = float(orientation_weight)
+        self.velocity_weight = float(velocity_weight)
+        self.control_weight = float(control_weight)
+        # Where the orientation atom reaches 0. The default 0.6 EQUALS the episode's fall
+        # threshold, so the atom carries no signal until the episode is already lost: it is
+        # a safety atom with zero margin. Raising it above the fall line gives the
+        # conjunction something to act on while a recovery is still possible. This does not
+        # move the fall threshold itself (0.6 is the task definition and stays fixed) — it
+        # only moves where the COST starts caring.
+        self.orientation_floor = float(orientation_floor)
+        # `atom_soft_floor` > 0 replaces each atom's hard clip-at-0 with a strictly
+        # monotone exponential tail (tasks/base.soft_ramp). 0.0 keeps the original
+        # clipped-linear atoms exactly, so this is opt-in and changes no existing result.
+        # See soft_ramp's docstring for why a flat zero region breaks a p<0 conjunction.
+        self.atom_soft_floor = float(atom_soft_floor)
+        self.atom_tail_tau = float(atom_tail_tau)
         # target_velocity default is deliberately high enough that STANDING STILL
         # fails the speed objective (measured: a settled hopper stands at height
         # ≈1.2 with zaxis_z≈1.0 and vel_x≈0). This is what makes the objectives
@@ -40,6 +64,12 @@ class HopperTask(Task):
         self._pos_adr = int(m.sensor_adr[mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_SENSOR, "torso_position")])
         self._vel_adr = int(m.sensor_adr[mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_SENSOR, "torso_subtreelinvel")])
         self._zax_adr = int(m.sensor_adr[mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_SENSOR, "torso_zaxis")])
+
+    def _ramp(self, r: np.ndarray) -> np.ndarray:
+        """Normalized ramp coordinate -> fulfillment. Hard clip, or a soft monotone floor."""
+        if self.atom_soft_floor <= 0.0:
+            return np.clip(r, 0.0, 1.0)
+        return soft_ramp(r, f_min=self.atom_soft_floor, tau=self.atom_tail_tau)
 
     def _torso_height(self, sensordata: np.ndarray) -> np.ndarray:
         return sensordata[..., self._pos_adr + 2]
@@ -56,15 +86,15 @@ class HopperTask(Task):
         vel = self._torso_vel_x(sensordata)
         zax = self._torso_zaxis_z(sensordata)
 
-        height_cost      = 10.0 * (height - self.target_height) ** 2
-        orientation_cost = 50.0 * (1.0 - zax) ** 2
-        velocity_cost    =  5.0 * (vel - self.target_velocity) ** 2
+        height_cost      = self.height_weight      * (height - self.target_height) ** 2
+        orientation_cost = self.orientation_weight * (1.0 - zax) ** 2
+        velocity_cost    = self.velocity_weight    * (vel - self.target_velocity) ** 2
         zero             = np.zeros_like(height_cost)
         return np.stack([height_cost, orientation_cost, velocity_cost, zero], axis=-1)
 
     def running_cost_terms(self, qpos, qvel, sensordata, u) -> np.ndarray:
         terms = self.terminal_cost_terms(qpos, qvel, sensordata)
-        control_cost = 0.3 * np.sum(u ** 2, axis=-1)
+        control_cost = self.control_weight * np.sum(u ** 2, axis=-1)
         # replace the last (zero) column with control cost
         out = terms.copy()
         out[..., -1] = control_cost
@@ -88,7 +118,7 @@ class HopperTask(Task):
         # No penalty for hopping higher — the torso bobs up during flight.
         h = self._torso_height(sensordata)
         h_full, h_floor = 1.15, 0.85
-        return np.clip((h - h_floor) / (h_full - h_floor), 0.0, 1.0)
+        return self._ramp((h - h_floor) / (h_full - h_floor))
 
     def _orientation_fulfillment(self, sensordata: np.ndarray) -> np.ndarray:
         # zaxis_z = cos(torso tilt): 1 upright, 0 horizontal. Full credit near
@@ -96,8 +126,8 @@ class HopperTask(Task):
         # i.e. before the torso is horizontal, so uprightness decays before the
         # tip-over cliff (FPL_MPPI_HANDOFF §6).
         z = self._torso_zaxis_z(sensordata)
-        z_full, z_floor = 0.95, 0.6
-        return np.clip((z - z_floor) / (z_full - z_floor), 0.0, 1.0)
+        z_full, z_floor = 0.95, self.orientation_floor
+        return self._ramp((z - z_floor) / (z_full - z_floor))
 
     def _velocity_fulfillment(self, sensordata: np.ndarray) -> np.ndarray:
         # One-sided, LINEAR forward-speed tracking: proportional credit vx/target,
@@ -108,7 +138,7 @@ class HopperTask(Task):
         # more spread — while staying one-sided (no reward for exceeding the target,
         # so no incentive to sprint into a fall; FPL_MPPI_HANDOFF §6).
         vx = self._torso_vel_x(sensordata)
-        return np.clip(vx / self.target_velocity, 0.0, 1.0)
+        return self._ramp(vx / self.target_velocity)
 
     def _control_fulfillment(self, u: np.ndarray) -> np.ndarray:
         # Mild effort regularizer. Sits near-constant in ~[0.75, 1.0] — it is almost
@@ -116,7 +146,7 @@ class HopperTask(Task):
         # discourages slamming the actuators, which measurably prevents falls. (An
         # earlier version dropped it as a "dead" atom; that INCREASED the fall rate —
         # liveness ≠ value.)
-        return np.clip(1.0 - 0.25 * np.mean(u ** 2, axis=-1), 0.0, 1.0)
+        return self._ramp(1.0 - 0.25 * np.mean(u ** 2, axis=-1))
 
     def running_cost_terms_f(self, qpos, qvel, sensordata, u) -> np.ndarray:
         return np.stack(

@@ -1,0 +1,9 @@
+{
+  "sha": "e74e64a442c6e4282875d8f972ad4c19d7bcd0f2",
+  "dirty": true,
+  "config_hash": {
+    "vanilla": "4d2f9debaa93",
+    "fpl": "0742a9e0d9c7"
+  },
+  "note": "fpl config_hash reflects run.steps overridden to match the shared protocol length (500), not the 400-step flagship file on disk."
+}

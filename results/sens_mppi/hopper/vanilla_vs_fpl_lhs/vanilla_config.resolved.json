@@ -1,0 +1,49 @@
+{
+  "label": "vanilla mppi (hopper, working)",
+  "notes": "objective.mode=normal, height_weight=10.0, velocity_weight=0.15, noise=0.4, temp=0.15. 30-seed check @500 steps: survival 0.80 (Wilson95 lb 0.63), vx 1.07 m/s (54% of target), h_mean 0.83. See module docstring for search log.",
+  "objective": {
+    "floor_weight": 1.0,
+    "gamma": 0.99,
+    "group_p": null,
+    "mode": "normal",
+    "p": -1.0,
+    "term_indices": null,
+    "time_p": -2.0,
+    "weights": null
+  },
+  "proposal": {
+    "extra": {},
+    "include_mean": false,
+    "kind": "gaussian",
+    "noise_level": 0.4,
+    "num_knots": 4,
+    "num_samples": 256,
+    "plan_horizon": 0.6
+  },
+  "run": {
+    "init": "hopper_stand",
+    "iterations": 1,
+    "mode": "headless",
+    "nthread": null,
+    "out": null,
+    "seeds": [
+      0
+    ],
+    "spline_type": "zero",
+    "steps": 500
+  },
+  "spec_version": 1,
+  "task": {
+    "kwargs": {
+      "height_weight": 10.0,
+      "target_velocity": 2.0,
+      "velocity_weight": 0.15
+    },
+    "name": "hopper"
+  },
+  "update": {
+    "extra": {},
+    "rule": "path_integral",
+    "temperature": 0.15
+  }
+}
