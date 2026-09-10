@@ -43,8 +43,30 @@ def make_jax_costs(task: "Task"):
     Imports jax lazily -- only callers that actually plan on MJX pay for it. The returned
     object reads its constants (weights, sensor addresses, targets) FROM the live task, so
     a config's `task.kwargs` flow through automatically.
+
+    Dispatch is by exact class (not isinstance): a new Task subclass must get its own
+    entry here -- silently inheriting a parent's cost mirror would score the wrong
+    objective (G1ReachTask overrides an atom, so it must NOT fall back to G1WalkJaxCosts).
     """
-    raise NotImplementedError(
-        "jax cost implementations land in phase 2 (see docs/mjx_gradient_mpc.md). "
-        "Phase 1 sampling-on-MJX scores rollouts with the existing numpy costs."
-    )
+    from analytic_mppi.tasks.hopper import HopperTask
+    from analytic_mppi.tasks.walker import WalkerTask
+    from analytic_mppi.tasks.g1_standup import G1StandupTask
+    from analytic_mppi.tasks.g1_walk import G1WalkTask
+
+    from .hopper import HopperJaxCosts
+    from .walker import WalkerJaxCosts
+    from .g1 import G1StandupJaxCosts, G1WalkJaxCosts
+
+    registry = {
+        HopperTask: HopperJaxCosts,
+        WalkerTask: WalkerJaxCosts,
+        G1StandupTask: G1StandupJaxCosts,
+        G1WalkTask: G1WalkJaxCosts,
+    }
+    cls = registry.get(type(task))
+    if cls is None:
+        raise TypeError(
+            f"no jnp cost mirror for {type(task).__name__} "
+            f"(supported: {sorted(t.__name__ for t in registry)})"
+        )
+    return cls(task)

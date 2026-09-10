@@ -254,6 +254,35 @@ def test_mjx_validation_needs_no_jax_import():
     subprocess.run([sys.executable, "-c", src], check=True)
 
 
+def test_gradient_descent_resolves():
+    r = resolve(load_config_file("configs/exp/hopper_gradient.py", 0))
+    assert r.controller == "gradient_mpc"
+    assert r.build["backend"] == "mjx"
+    assert r.build["num_samples"] == 1
+    assert r.build["learning_rate"] == 0.05          # via update.extra
+    assert "noise_level" in r.dropped and "temperature" in r.dropped
+
+
+def test_gradient_requires_mjx_backend():
+    cfg = load_config_file("configs/exp/hopper_gradient.py", 0)
+    with pytest.raises(ConfigError, match="mjx"):
+        resolve(cfg.with_(**{"run.backend": "mujoco"}))
+
+
+def test_gradient_requires_single_sample():
+    cfg = load_config_file("configs/exp/hopper_gradient.py", 0)
+    with pytest.raises(ConfigError, match="num_samples"):
+        resolve(cfg.with_(**{"proposal.num_samples": 128}))
+
+
+def test_gradient_rejects_explicit_noise():
+    """gradient_mpc has no sampling noise; a non-default noise_level must error, not
+    silently drop (the run.py:_ALGO_PARAMS bug, gradient edition)."""
+    cfg = load_config_file("configs/exp/hopper_gradient.py", 0)
+    with pytest.raises(ConfigError, match="noise_level"):
+        resolve(cfg.with_(**{"proposal.noise_level": 0.7}))
+
+
 def test_v1_provenance_json_still_loads():
     """SPEC_VERSION 1 records have no run.backend; from_dict must default it."""
     cfg = load_config_file("configs/env/hopper.py")

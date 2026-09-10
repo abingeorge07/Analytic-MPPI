@@ -107,6 +107,9 @@ def _algo_kwargs(name):
 @pytest.mark.parametrize("algo_name", sorted(SAMPLING_CONTROLLERS))
 def test_pendulum_algorithm_runs(algo_name):
     """Each new algorithm produces finite actions for 30 closed-loop steps."""
+    if algo_name == "gradient_mpc":
+        pytest.skip("not a sampler: needs an MJX backend + a jnp-cost task (pendulum "
+                    "has neither); covered by tests/test_gradient_mpc.py")
     task = make_task("pendulum")
     backend = MujocoBackend(task.model_path, nthread=2)
     cls = SAMPLING_CONTROLLERS[algo_name]

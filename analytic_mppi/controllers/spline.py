@@ -126,6 +126,41 @@ def interp_cubic(knots: np.ndarray, tk: np.ndarray, t_eval: np.ndarray) -> np.nd
             + h11[:, None] * (hb * mr))
 
 
+def shift_plan(mean: np.ndarray, tk: np.ndarray, dt: float, spline_type: str,
+               shift_accum: float) -> Tuple[np.ndarray, float]:
+    """Receding-horizon warm start: advance a knot plan `mean` (num_knots, nu) by `dt`.
+
+    Extracted verbatim from SamplingController._shift_mean so gradient MPC warm-starts
+    with the IDENTICAL semantics as the sampling stack (same plans are interchangeable).
+    Returns (new_mean, new_shift_accum).
+
+    Zero-order-hold is piecewise constant, so resampling it at tk+dt is a no-op whenever
+    dt < knot spacing -- that would silently disable the warm-start time-advance for the
+    default coarse-knot ZOH config. Instead accumulate elapsed time in `shift_accum` and
+    roll the plan one knot toward t=0 each time a full knot spacing has elapsed
+    (repeating the terminal knot). Continuous splines (linear/cubic) represent a sub-knot
+    shift exactly, so they resample at tk + dt and ignore the accumulator.
+    """
+    num_knots = mean.shape[0]
+    if num_knots == 1:
+        return mean, shift_accum
+
+    if spline_type == "zero":
+        spacing = float(tk[1] - tk[0])
+        shift_accum += dt
+        # +eps so an exact multiple of `spacing` reached via float accumulation
+        # (e.g. 10 * 0.02 = 0.19999...) fires on the intended step, not one late.
+        n_roll = int((shift_accum + 1e-9) // spacing)
+        if n_roll > 0:
+            shift_accum -= n_roll * spacing
+            n_roll = min(n_roll, num_knots - 1)
+            tail = np.repeat(mean[-1:], n_roll, axis=0)
+            mean = np.concatenate([mean[n_roll:], tail], axis=0)
+        return mean, shift_accum
+
+    return interpolate(mean[None, ...], tk, tk + dt, spline_type)[0], shift_accum
+
+
 SPLINE_INTERPOLATORS = {
     "zero": interp_zero,
     "linear": interp_linear,

@@ -300,6 +300,12 @@ _DISPATCH: dict[tuple[str, str], _Dispatch] = {
     ("gaussian", "shielded"):            _Dispatch("fpl_shielded"),
     ("gaussian", "tempered"):            _Dispatch("fpl_tempered"),
     ("gaussian", "composed"):            _Dispatch("composed_grad"),
+    # Non-sampling arm: single-plan first-order descent through MJX autodiff. On these
+    # axes honestly: the "proposal" is the deterministic current mean, the update rule is
+    # descent on it. noise_level/temperature at their defaults are dropped; set
+    # explicitly they error (GradientMPC accepts neither) -- exactly the honesty this
+    # table exists for. A future iLQG arm is ("gradient", "ilqg").
+    ("gradient", "descent"):             _Dispatch("gradient_mpc"),
     ("cma",      "path_integral"):       _Dispatch("mppi_cma", noise_key="initial_noise_level"),
     ("cem",      "elite_mean"):          _Dispatch("cem", noise_key="sigma_start"),
     ("dial",     "path_integral"):       _Dispatch("dial"),
@@ -371,6 +377,19 @@ def _check_backend(cfg: ExperimentConfig, d: _Dispatch) -> None:
     still validates configs correctly (it fails at backend CONSTRUCTION with an install
     hint, not here with an ImportError).
     """
+    if d.controller == "gradient_mpc":
+        if cfg.run.backend != "mjx":
+            raise ConfigError(
+                "gradient+descent (gradient_mpc) differentiates through the MJX rollout; "
+                "set run.backend='mjx' (the CPU backend has no differentiable surface)."
+            )
+        if cfg.proposal.num_samples != 1:
+            raise ConfigError(
+                f"gradient+descent optimizes a single plan; proposal.num_samples must be "
+                f"1, got {cfg.proposal.num_samples}. Set it explicitly so the config "
+                f"records what actually runs."
+            )
+
     if cfg.run.backend == "mujoco":
         return
 

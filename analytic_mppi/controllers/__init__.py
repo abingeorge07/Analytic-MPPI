@@ -21,6 +21,7 @@ from analytic_mppi.controllers.fpl_adaptive import FplAdaptiveMPPI
 from analytic_mppi.controllers.fpl_colored import FplColoredMPPI
 from analytic_mppi.controllers.fpl_tempered import FplTemperedMPPI
 from analytic_mppi.controllers.fpl_shielded import FplShieldedMPPI
+from analytic_mppi.controllers.gradient_mpc import GradientMPC
 
 
 # Legacy controllers (full-horizon callable-cost API) -- selected by `variant=...`
@@ -43,6 +44,10 @@ SAMPLING_CONTROLLERS: dict[str, type] = {
     "fpl_colored": FplColoredMPPI,
     "fpl_tempered": FplTemperedMPPI,
     "fpl_shielded": FplShieldedMPPI,
+    # Not a sampler: single-plan gradient descent through MJX autodiff. Lives in this
+    # registry because it is the same (task, backend, **kwargs) ctor + act() protocol;
+    # config.resolve gates it to run.backend="mjx".
+    "gradient_mpc": GradientMPC,
 }
 
 
@@ -77,7 +82,7 @@ def list_sampling_controllers() -> list[str]:
 __all__ = [
     "MPPI", "MPPIv2", "MppiCma", "CEM", "DIAL", "PredictiveSampling", "FplGmmSampler",
     "ComposedGradientMPPI", "FplAdaptiveMPPI", "FplColoredMPPI", "FplTemperedMPPI",
-    "FplShieldedMPPI",
+    "FplShieldedMPPI", "GradientMPC",
     "CONTROLLERS", "SAMPLING_CONTROLLERS",
     "get_controller_class", "get_sampling_controller_class",
     "list_controllers", "list_sampling_controllers",

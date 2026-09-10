@@ -10,7 +10,10 @@ requires-python = ">=3.10"
 dependencies = [
   "numpy",
   "matplotlib",
-  "mujoco>=3.2",
+  # Upper bound is deliberate: mujoco 3.12 changes fixed-seed trajectories vs 3.5
+  # (measured on hopper), so a fresh install must not land on a different physics than
+  # the one behind the published results. Bump together with the [mjx] pin.
+  "mujoco>=3.2,<3.6",
 ]
 
 [project.optional-dependencies]

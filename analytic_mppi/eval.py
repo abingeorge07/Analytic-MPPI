@@ -64,10 +64,13 @@ def _make_plan_backend(backend: str, model_path, nthread: Optional[int]):
     if backend == "mujoco":
         return MujocoBackend(model_path, nthread=nthread)
     if backend == "mjx":
-        raise NotImplementedError(
-            "backend='mjx' lands in phase 1 (analytic_mppi/dynamics/mjx_backend.py). "
-            "Install the extra with `pip install -e '.[mjx]'` once it exists."
-        )
+        try:
+            from analytic_mppi.dynamics.mjx_backend import MJXBackend
+        except ImportError as e:
+            raise ImportError(
+                "backend='mjx' needs the [mjx] extra: pip install -e '.[mjx]'"
+            ) from e
+        return MJXBackend(model_path)
     raise ValueError(f"unknown backend {backend!r} (mujoco | mjx)")
 
 

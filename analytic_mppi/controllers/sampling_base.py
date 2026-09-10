@@ -27,7 +27,7 @@ from typing import Optional, Sequence
 import numpy as np
 
 from analytic_mppi.tasks.base import Task, power_mean
-from .spline import interpolate, make_eval_times, make_knot_times
+from .spline import interpolate, make_eval_times, make_knot_times, shift_plan
 
 
 @dataclass
@@ -491,30 +491,6 @@ class SamplingController:
     # ---- warm-start: shift mean forward in time by dt ----
 
     def _shift_mean(self, dt: float) -> None:
-        if self.num_knots == 1:
-            return
-
-        # Zero-order-hold is piecewise constant, so resampling it at tk+dt is a
-        # no-op whenever dt < knot spacing: every shifted knot time still lands
-        # in its own segment. That silently disables the warm-start time-advance
-        # for the default (coarse-knot ZOH) config. Instead, accumulate elapsed
-        # time and roll the plan one knot toward t=0 each time a full knot
-        # spacing has elapsed (repeating the terminal knot) — a genuine
-        # receding-horizon advance at the representation's resolution.
-        if self.spline_type == "zero":
-            spacing = float(self.tk[1] - self.tk[0])
-            self._shift_accum += dt
-            # +eps so an exact multiple of `spacing` reached via float accumulation
-            # (e.g. 10 * 0.02 = 0.19999…) fires on the intended step, not one late.
-            n_roll = int((self._shift_accum + 1e-9) // spacing)
-            if n_roll > 0:
-                self._shift_accum -= n_roll * spacing
-                n_roll = min(n_roll, self.num_knots - 1)
-                tail = np.repeat(self.mean[-1:], n_roll, axis=0)
-                self.mean = np.concatenate([self.mean[n_roll:], tail], axis=0)
-            return
-
-        # Continuous splines (linear/cubic) can represent a sub-knot shift
-        # exactly: resample the current plan at knot times advanced by dt.
-        shifted = interpolate(self.mean[None, ...], self.tk, self.tk + dt, self.spline_type)[0]
-        self.mean = shifted
+        # Extracted to spline.shift_plan so gradient MPC shares the identical warm-start.
+        self.mean, self._shift_accum = shift_plan(
+            self.mean, self.tk, dt, self.spline_type, self._shift_accum)
