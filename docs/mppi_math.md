@@ -82,6 +82,21 @@ FPL is not, part of the measured gap is clipping bias rather than scalarization.
 > per step and report it alongside the Pareto plots. If it is ~0 for both, the confound is dead
 > and you can say so in one sentence. If it differs, that number belongs in the paper.
 
+**How the iLQR arm handles bounds (S10 decision).** `controllers/ilqr.py` does *not*
+clip-after-update — that would re-introduce this same confound into the optimizer arm (a
+clipped Newton step is biased inward exactly like a clipped sample cloud, and the FPL and
+linear objectives saturate differently). Instead it solves the box-constrained
+$Q_{uu}$ sub-problem by projected Newton per step: the feedforward $k_t$ is the minimizer of
+$\tfrac12\,\delta u^\top \bar Q_{uu}\,\delta u + Q_u^\top \delta u$ subject to
+$u_{\min}\le u_t+\delta u\le u_{\max}$ (fixed clamp-and-solve iterations), and the feedback
+rows $K_t$ of clamped coordinates are zeroed, so the closed-loop update never *relies* on
+control authority it does not have. The forward line search additionally clips at execution,
+which is exact (the plan being evaluated is the plan being scored — there is no importance
+weight to break). Residual caveat: the spline projection $\theta = W^+u^*$ *can* leave the
+box, so $\theta$ is clipped after projection; with `spline_type="linear"` (the iLQR arm's
+default) the overshoot is bounded by the projection residual, which is instrumented per act
+(`last_proj_resid`, GATE G10).
+
 ---
 
 ## 4. The FPL score itself: correct as specified
@@ -157,6 +172,22 @@ your headline results come from.
 > comparison is genuinely apples-to-apples. Failing that, report ESS at every $(p,\lambda)$ cell.
 > A reviewer who knows MPPI will ask this.
 
+> **Structural fix, adopted (S12 / GATE G11): resolved by construction.** The Milestone 4
+> comparison places FPL and linear on the same optimizer *twice*, once with MPPI's softmax
+> update rule and once with iLQR, whose update rule has **no $\lambda$ anywhere** — no
+> temperature, no softmax, no $-\log u$ bridge. To keep the iLQR column temperature-free
+> end-to-end its warm-start proposer is `PredictiveSampling` (argmax over the Gaussian
+> cloud with the current mean always included), not MPPI. If the FPL–linear gap were an
+> artifact of $\lambda/p$ coupling in the sampling update, the gap should collapse (or
+> flip) in the iLQR column. Measured, hopper + walker, 10 seeds/cell, matched dynamics
+> budget (`verification/s12_the_2x2.py`): FPL is $\ge$ linear in every cell — decisively
+> on walker (1.57 ± 0.07 vs 0.86 ± 0.10, CIs disjoint) and at parity on hopper
+> (1.20 ± 0.52 vs 1.18 ± 0.51). The gap survives an optimizer with no temperature. GATE
+> G10 additionally establishes that the knot basis is a **headwind** for FPL specifically
+> in the iLQR column (projection residual 0.65 vs 0.51; $J_{\text{post}}-J_{\text{pre}}$
+> gap 0.51 vs 0.07), so this is not a boost from the new optimizer either. See
+> `FPL_FINDINGS.md#S12 — the {FPL, linear} x {MPPI, iLQR} 2x2` for the full table.
+
 ---
 
 ## 7. Weight collapse in the other direction: the "mushy" regime
@@ -217,6 +248,66 @@ that with $\gamma=0.99$ over $H=50$ the discount only spans $1\to0.605$ — it i
 average, so discounting is not saving you here. **`fpl_time_p` is not an optional refinement; it is
 what makes the min-fulfillment floor a trajectory property rather than a per-step one.**
 
+> **[2026-09-11 — GATE G3: PARTIAL. There are TWO causes here, and WO-3.3 closes only one.]**
+>
+> `objective.terminal_value=True` replaces the renormalization $\frac{1-\gamma}{1-\gamma^H}\sum\gamma^t r_t$
+> with an explicit tail $(1-\gamma)\sum_{t<H}\gamma^t r_t + \gamma^H v(x_H)$, $v$ = hold $r_H$.
+> Re-running the table above (atom collapses to 0.02 and stays collapsed, $H=50$, $\gamma=0.99$),
+> as `OFF → ON`:
+>
+> | falls at | `fpl_discounted` | `fpl_cost` (time-mean) | `fpl_cost` (`time_p=-1`) |
+> |---|---|---|---|
+> | 10/50 | 0.510 → **0.278** | 0.286 → **0.148** | 0.075 → **0.063** |
+> | 25/50 | 0.800 → **0.483** | 0.588 → **0.267** | 0.123 → **0.073** |
+> | 40/50 | 0.941 → **0.612** | 0.847 → **0.370** | 0.274 → **0.084** |
+>
+> **Cause 1 — horizon truncation. Closed.** The renormalization assumed the post-horizon tail
+> equals the in-horizon average, which is why a late fall scored 0.94. At $\gamma=0.99,H=50$ the
+> tail is $\gamma^{49}=0.61$ of the total discount mass, so this was never a small correction.
+> The best consequence is in the last column: with the tail term, `time_p=-1` becomes nearly
+> **fall-time invariant** (0.063 / 0.073 / 0.084, a 1.3× spread) where it previously ranged
+> 0.075 → 0.274, a 3.6× spread rewarding late falls. A fall is now a fall whenever it happens.
+>
+> **Cause 2 — order of operations. NOT closed, and not closable this way.** The Jensen gap is a
+> property of conjoining *after* averaging, not of the weights: $\mu_p$ is concave for $p\le1$, so
+> $\mu_p(\sum_t w_t f_t)\ge\sum_t w_t\,\mu_p(f_t)$ for **every** convex weight vector $w$. Measured
+> over 4000 random rollouts the gap shrinks but never vanishes or flips: mean $+0.129\to+0.088$,
+> min $+0.083\to+0.030$, strictly positive in **100%** of cases both ways. No time-weighting
+> change can remove it.
+>
+> **So the standing advice is unchanged and is now the *only* fix for cause 2:** use
+> `fpl_cost` with `fpl_time_p ≤ 0`, not `use_fpl_discounted`. The published hopper/walker configs
+> already do (`time_p=-2.0`), so they sit on the safe side of this — but `fpl_discounted` remains
+> structurally optimistic and should not be used for a safety claim.
+>
+> Caveat on the tail estimate: holding $r_H$ constant is WO-3.3's *cheapest* $v$, and at
+> $\gamma=0.99,H\approx30$ it carries ~74% of the weight — the objective becomes largely
+> "terminal fulfillment, in-horizon correction". That is defensible (it is the honest tail) but
+> it is a big lever, and a fitted $v$ is the stated improvement. Verified by
+> `tests/test_atom_floor.py`; flag defaults to `False`, so nothing pre-existing moved.
+>
+> **[Closed-loop follow-through — the cheap tail is NET HARMFUL. Do not enable it.]**
+> Two further facts, from `verification/s4_terminal_value_g3.py` (hopper, 16 seeds):
+>
+> 1. **It does not reach the published objective at all.** The published spec is
+>    `fpl_cost` + `fpl_time_p=-2` + `fpl_time_discount=False`, i.e.
+>    `power_mean(per_step, time_p, weights=None)` — an UNWEIGHTED soft-min with no
+>    $\frac{1-\gamma}{1-\gamma^H}$ anywhere in it. The renormalization this section
+>    criticizes lives in the `time_p=None` and `use_fpl_discounted` paths only. The
+>    controller now raises on `terminal_value=True` in the inert combination (invariant 11.5).
+> 2. **Where it does reach, it degrades survival badly.** Holding time-discounting fixed and
+>    toggling only the tail: FPL survival $0.88\to0.56$ (portability) and $0.81\to0.44$
+>    (zero_tuning), with the FPL-vs-linear gap collapsing $+0.427\to+0.049$ on the latter.
+>    The tail weight $\gamma^{30}=0.740$ versus $\approx0.010$ per interior step is a **74×**
+>    concentration on the final step, which guts precisely the weakest-link-over-time property
+>    this section argues is what makes the floor a *trajectory* property. The cheap $v$
+>    reintroduces §8a's defect from the other side: a mid-horizon collapse that has partly
+>    recovered by step $H$ is forgiven.
+>
+> So the honest status of §8a is: **truncation is real but the cheap fix is worse than the
+> disease under $p<0$ time aggregation.** A fitted $v(x_H)$ is required before this is usable,
+> and the operative advice remains "use `fpl_cost` with `fpl_time_p ≤ 0`".
+
 ### 8b. The $\varepsilon$-plateau is still live on walker, quadruped and cube
 
 `soft_ramp` exists and fixes this, but `grep` shows it is used **only in `hopper.py`** (and only when
@@ -239,6 +330,27 @@ genuine discrimination.
 Three of your four headline robots are affected. Since the robustness experiments deliberately push
 into the failure region, this is where it matters most.
 
+> **[2026-09-11 — addressed by WO-3.4, and it was worse than described above.]**
+>
+> The plateau is not confined to walker/quadruped/cube. `soft_ramp` is gated behind
+> `atom_soft_floor`, which **defaults to `0.0`** — so it is OFF on hopper too, and hopper's
+> ramps are hard clips like everyone else's. Measured on hopper at $K=256$:
+> `velocity_fulfillment` sits at the clip **95.7%** of the time and `orientation_fulfillment`
+> 14.0%. Hopper was the *most* exposed headline robot, not the exception.
+>
+> `objective.atom_floor` now clamps every atom to $[\varepsilon,1]$ before any power mean, in
+> the numpy, JAX and cost-GD paths and for **both** $p$ settings — the symmetry matters because
+> a floor is needed only at $p<0$ (at $p=1$, $\partial M_p/\partial x_i=w_i$, no singularity),
+> so a floor applied only where it is numerically required would itself be an FPL-vs-linear
+> confound. Raising $1e{-8}\to1e{-3}$ moves FPL scores by mean $|\Delta S|=9.62$ and the linear
+> arm by $0.0004$: a ~24,000× asymmetry from an identical clamp.
+>
+> Default stays at the incumbent $1e{-8}$ so pre-existing configs and provenance records keep
+> their meaning. GATE G1 (hopper, 16 seeds): the FPL-minus-best-linear gap moves −5% to −6% and
+> the separation holds — see `FPL_FINDINGS.md`. **Still open:** walker, quadruped and cube have
+> not been re-measured, and the $S$-distribution bimodality argument above should be re-derived
+> at $\varepsilon=1e{-3}$ ($S$ saturates at 6.9, not 17.32).
+
 ---
 
 ## 9. The Jensen gap on the mean update (a limit, not a fix)
@@ -259,6 +371,51 @@ argmax-vs-softmax ablation a **direct measurement** of this term rather than jus
 
 ---
 
+## 10. The FPL objective decomposes exactly for DDP (S9 / WO-3.2, GATE G7: PASS)
+
+None of the FPL scores is a sum of stage costs, which is the form iLQR/DDP needs. But every
+power mean is **quasi-arithmetic** — $M_p(m_{0:H}) = g^{-1}\!\big(\sum_t \hat w_t\, g(m_t)\big)$
+with generator $g(m)=m^p$ (or $\log m$ at $p{=}0$) — so carrying the running sum
+$z_t = \sum_{s<t}\hat w_s\, g(m_s)$ as one extra state makes the accumulation **additive** and
+pushes the entire nonlinearity into a terminal readout. This is an exact rewrite, not an
+approximation. Implemented in `analytic_mppi/controllers/accumulator.py`; augmented dynamics
+are block-triangular ($\partial x'/\partial z = 0$, asserted by autodiff through a real
+`mjx.step` in `tests/test_accumulator.py`), so the iLQR backward pass on the physics block
+is unchanged in size.
+
+With the $-\log(\text{reward})$ cost bridge this codebase uses (NOT the $-z^{1/p}$
+reward convention in NEXT_STEPS' S9 table — implementing that table literally scores a
+different objective), the readouts are:
+
+| mode | accumulator increment | terminal readout $J(z_H)$ |
+|---|---|---|
+| `fpl_cost`, `time_p=None` | $\hat w_t\, m_t$ | $-\log z_H$ |
+| `fpl_cost`, `time_p=q\neq 0` | $\hat w_t\, m_t^{\,q}$ | $-\tfrac1q\log z_H$ |
+| `fpl_cost`, `time_p=0` | $\hat w_t \log m_t$ | $-z_H$ **(exactly linear)** |
+| `fpl_discounted` | $\hat w_t^{(j)} f_j(t)$, one slot per atom | $-\log M_p(z_H)$ |
+| `fpl_layered` | same (per grouped atom) | $-\log M_p^{\text{outer}}(M^{\text{inner}}_{p_g}(z_H))$ |
+
+($m_t$ is the per-step atom-axis composite; $\hat w_t$ the normalized time weights of
+§WO-3.3, i.e. uniform for the published unweighted soft-min.) Two consequences:
+
+- **At `time_p = 0` the FPL objective is already additive** — generator $\log$ and bridge
+  $-\log$ cancel, leaving no terminal nonlinearity at all. That setting is the natural
+  first target if iLQR's terminal handling ever becomes the suspect.
+- **For `fpl_discounted`, $z_H$ *is* `traj.reward_terms`** — the per-objective vector the
+  multi-objective controllers already consume. The augmentation exposes an existing
+  quantity rather than inventing one.
+
+GATE G7 (1e-6 parity vs the numpy scorers): **PASS** — `tests/test_jax_costs.py` gates
+`normal`, all three `time_p` branches of `fpl_cost`, and `fpl_discounted` in JAX on real
+hopper *and* walker atom surfaces; `tests/test_accumulator.py` additionally gates
+`fpl_layered` and `hybrid` against the numpy scorer on `g1_standup` — the only tasks where
+they are reachable (hopper/walker define neither `fpl_groups` nor `floor_term_indices`,
+and `config.JAX_COST_MODES` already excludes both from the mjx path). The conjunction-split
+collapse (`fpl_conj_indices`) rides through unchanged, since the decomposition touches only
+the time axis.
+
+---
+
 ## Summary
 
 **Sound:** the knot-space parameterization (§2); the $-\log u$ score, its sign, min-shift and
@@ -273,10 +430,14 @@ FPL-vs-linear contrast.
 same mechanism appears as ESS collapse to uniform in the easy regime (§7).
 
 **Needs fixing before the next round of results:**
-1. `soft_ramp` on walker / quadruped / cube — the flat plateau removes all gradient among failing
-   rollouts on 3 of 4 headline robots (§8b). Highest priority.
-2. `fpl_time_p` set (not `None`), or move off `use_fpl_discounted` — otherwise the floor is a
-   per-step property and a mid-rollout fall scores 0.80 (§8a).
+1. ~~`soft_ramp` on walker / quadruped / cube~~ — **addressed** by `objective.atom_floor`
+   (WO-3.4), which floors every atom in every path and both arms; it applies to hopper too,
+   which turned out to be the most exposed robot of the four (§8b). Remaining: re-measure
+   walker / quadruped / cube, which G1 did not cover.
+2. `fpl_time_p` set (not `None`), or move off `use_fpl_discounted` — **still required.**
+   `objective.terminal_value` (WO-3.3) closes the *truncation* half of §8a and makes
+   `time_p<0` fall-time invariant, but the *order-of-operations* half is Jensen and cannot be
+   fixed by any time weighting, so `fpl_discounted` stays structurally optimistic (§8a).
 3. ESS-targeted $\lambda$, or ESS reported per $(p,\lambda)$ — otherwise $p$-sweeps are confounded
    with greediness sweeps precisely in the competitive regime (§6).
 4. Log knot-saturation fraction per controller to rule out clipping asymmetry (§3).

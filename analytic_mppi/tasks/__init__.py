@@ -3,7 +3,8 @@ from __future__ import annotations
 
 from typing import Dict, Type
 
-from .base import Task, power_mean
+from .base import (ATOM_FLOOR_LEGACY, ATOM_FLOOR_RECOMMENDED, Task, floor_atoms,
+                   power_mean)
 from .pendulum import PendulumTask, PendulumComTask
 from .walker import WalkerTask
 from .cube import CubeRotationTask
@@ -53,4 +54,7 @@ __all__ = [
     "TASKS",
     "make_task",
     "power_mean",
+    "floor_atoms",
+    "ATOM_FLOOR_LEGACY",
+    "ATOM_FLOOR_RECOMMENDED",
 ]

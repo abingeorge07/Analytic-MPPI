@@ -8,6 +8,7 @@ from __future__ import annotations
 import numpy as np
 
 from .sampling_base import SamplingController, Trajectory
+from analytic_mppi.tasks.base import ATOM_FLOOR_LEGACY
 
 
 class CEM(SamplingController):
@@ -30,6 +31,8 @@ class CEM(SamplingController):
         use_fpl_discounted: bool = False,
         fpl_p: float = 0.1,
         fpl_gamma: float = 0.99,
+        fpl_atom_floor: float = ATOM_FLOOR_LEGACY,
+        fpl_terminal_value: bool = False,
         fpl_time_p: float | None = None,
         fpl_weights: "list[float] | None" = None,
         fpl_term_indices: "list[int] | None" = None,
@@ -42,6 +45,8 @@ class CEM(SamplingController):
             iterations=iterations, seed=seed,
             use_fpl_cost=use_fpl_cost, use_fpl_discounted=use_fpl_discounted,
             fpl_p=fpl_p, fpl_gamma=fpl_gamma,
+            fpl_atom_floor=fpl_atom_floor,
+            fpl_terminal_value=fpl_terminal_value,
             fpl_time_p=fpl_time_p, fpl_weights=fpl_weights,
             fpl_term_indices=fpl_term_indices,
         )

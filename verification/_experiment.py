@@ -16,6 +16,50 @@ import numpy as np
 
 from analytic_mppi.eval import (run_episode, make_task, init_hopper_stand,
                                  init_barkour_stand, init_cube)
+from analytic_mppi.tasks.base import ATOM_FLOOR_LEGACY
+
+
+# --- WO-3.4 / NEXT_STEPS S1-S2: the fulfillment-atom floor ------------------------
+# Every trial in the campaign goes through `run_trial`, so this one global is the only
+# place the floor needs setting for an A/B. It is deliberately NOT a per-call argument:
+# the floor must be identical for the FPL arm and the linear arm within a comparison
+# (invariant 11.1), and a global makes it impossible to set for one and not the other.
+# Drivers set it via `set_atom_floor`; ATOM_FLOOR_LEGACY (1e-8) reproduces every number
+# produced before the floor existed.
+ATOM_FLOOR: float = ATOM_FLOOR_LEGACY
+
+# WO-3.3: same reasoning, same mechanism. False is the legacy renormalized discounted mean.
+# NOTE on magnitude: at the study horizon (hopper H=30, gamma=0.99) the post-horizon tail is
+# gamma^29 = 0.75 of the total discount mass, so flipping this is NOT a small correction --
+# the terminal step's weight goes 0.029 -> 0.747. That is the point (the renormalization was
+# assuming that 75% equals the in-horizon average) but it makes the objective largely
+# "terminal fulfillment + in-horizon correction" under the cheap hold-r_H tail estimate.
+TERMINAL_VALUE: bool = False
+
+
+def set_atom_floor(floor: float) -> None:
+    global ATOM_FLOOR
+    if not (0.0 < float(floor) <= 1.0):
+        raise ValueError(f"atom floor must be in (0, 1], got {floor}")
+    ATOM_FLOOR = float(floor)
+
+
+# The published spec is fpl_cost + fpl_time_p<0 + time_discount=False, i.e. an UNWEIGHTED
+# soft-min over time. That path never consults the discount/terminal weights, so TERMINAL_VALUE
+# cannot act there (the controller now refuses the inert combination outright). Turning this on
+# makes the soft-min discount-weighted, which is the only way the terminal value can reach the
+# published objective -- so a G3 comparison has to move this first, then the tail, separately.
+TIME_DISCOUNT: bool = False
+
+
+def set_terminal_value(on: bool) -> None:
+    global TERMINAL_VALUE
+    TERMINAL_VALUE = bool(on)
+
+
+def set_time_discount(on: bool) -> None:
+    global TIME_DISCOUNT
+    TIME_DISCOUNT = bool(on)
 
 
 # --- per-environment study spec (matched to verification/*_pareto_sweep.py) --------
@@ -151,6 +195,12 @@ def run_trial(env: str, sampler: str, cost: str, seed: int, K: int, *,
         **sampler_kwargs(sampler, env, K),
         **cost_kwargs(cost, env),
     )
+    # The atom floor is part of the OBJECTIVE, so it is set for every arm identically
+    # (see ATOM_FLOOR above). `extra` may still override it for a deliberate sweep.
+    build["fpl_atom_floor"] = ATOM_FLOOR
+    build["fpl_terminal_value"] = TERMINAL_VALUE
+    if TIME_DISCOUNT and build.get("fpl_time_p") is not None:
+        build["fpl_time_discount"] = True
     if extra:
         build.update(extra)
     # `task_extra` carries Task-ctor settings that are part of the COST SPEC rather than

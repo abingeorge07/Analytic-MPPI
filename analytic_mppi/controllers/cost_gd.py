@@ -32,6 +32,9 @@ from types import MethodType
 import numpy as np
 import mujoco
 
+from analytic_mppi.tasks.base import (ATOM_FLOOR_LEGACY, discount_weights,
+                                      floor_atoms)
+
 from .sampling_base import Trajectory
 from .spline import interpolate
 
@@ -194,15 +197,16 @@ def _score_grad_normal(rt, tt, dt):
     return J, np.full_like(rt, dt), np.ones_like(tt)
 
 
-def _score_grad_fpl_cost(rt_f, tt_f, p, gamma):
+def _score_grad_fpl_cost(rt_f, tt_f, p, gamma, terminal_value=False):
     """Mirrors sampling_base._score_fpl (use_fpl_cost) plus analytic gradient. J = -reward."""
     M, H, n_run = rt_f.shape
     n_term = tt_f.shape[-1]
     H1 = H + 1
-    discounts_full = gamma ** np.arange(H1, dtype=np.float64)
-    norm_full = (1.0 - gamma) / (1.0 - gamma ** H1)
-    discounts_run = gamma ** np.arange(H, dtype=np.float64)
-    norm_run = (1.0 - gamma) / (1.0 - gamma ** H) if H > 1 else 1.0
+    # Weights carry the normalization; mirrors sampling_base._score_fpl (WO-3.3).
+    discounts_full = discount_weights(H1, gamma, terminal_value)
+    norm_full = 1.0
+    discounts_run = discount_weights(H, gamma, terminal_value)
+    norm_run = 1.0
 
     per_step_run, d_per_step_run_d_rt = _power_mean_and_grad(rt_f, p)
 
@@ -219,15 +223,16 @@ def _score_grad_fpl_cost(rt_f, tt_f, p, gamma):
     return -reward, -d_reward_d_rt, -d_reward_d_tt
 
 
-def _score_grad_fpl_discounted(rt_f, tt_f, p, gamma):
+def _score_grad_fpl_discounted(rt_f, tt_f, p, gamma, terminal_value=False):
     """Mirrors sampling_base._score_fpl (use_fpl_discounted) plus analytic gradient."""
     M, H, n_run = rt_f.shape
     n_term = tt_f.shape[-1]
     H1 = H + 1
-    discounts_full = gamma ** np.arange(H1, dtype=np.float64)
-    norm_full = (1.0 - gamma) / (1.0 - gamma ** H1)
-    discounts_run = gamma ** np.arange(H, dtype=np.float64)
-    norm_run = (1.0 - gamma) / (1.0 - gamma ** H) if H > 1 else 1.0
+    # Weights carry the normalization; mirrors sampling_base._score_fpl (WO-3.3).
+    discounts_full = discount_weights(H1, gamma, terminal_value)
+    norm_full = 1.0
+    discounts_run = discount_weights(H, gamma, terminal_value)
+    norm_run = 1.0
 
     chunks = []
     if n_term > 0:
@@ -257,13 +262,20 @@ def _score_grad_fpl_discounted(rt_f, tt_f, p, gamma):
 
 
 def cost_and_grad(qpos, qvel, sensordata, controls, task, cost_mode, dt, fpl_p, fpl_gamma,
-                  fd_eps=1e-6):
+                  fd_eps=1e-6, atom_floor=ATOM_FLOOR_LEGACY, terminal_value=False):
     """Total cost J and its gradients w.r.t. qpos / qvel / sensordata / controls
     (per-step + terminal). Per-step FD on the cost terms, analytic chain through
     the aggregation. Returns
     (J, dJ_dqpos, dJ_dqvel, dJ_dsens, dJ_du, dJ_dqpos_T, dJ_dqvel_T, dJ_dsens_T).
+
+    `atom_floor` clamps the fulfillment atoms (WO-3.4). It is applied to the FD
+    re-evaluations via `get_rt`/`get_tt` as well as to the base evaluation -- otherwise
+    J would be the floored objective while dJ was the derivative of the unfloored one.
     """
     M, H = qpos.shape[:2]
+
+    def _floored(fn):
+        return lambda *a: floor_atoms(fn(*a), atom_floor)
 
     if cost_mode == "normal":
         rt = task.running_cost_terms(qpos, qvel, sensordata, controls)
@@ -272,17 +284,17 @@ def cost_and_grad(qpos, qvel, sensordata, controls, task, cost_mode, dt, fpl_p, 
         get_tt = task.terminal_cost_terms
         J, dJ_drt, dJ_dtt = _score_grad_normal(rt, tt, dt)
     elif cost_mode == "fpl_cost":
-        rt = task.running_cost_terms_f(qpos, qvel, sensordata, controls)
-        tt = task.terminal_cost_terms_f(qpos[:, -1], qvel[:, -1], sensordata[:, -1])
-        get_rt = task.running_cost_terms_f
-        get_tt = task.terminal_cost_terms_f
-        J, dJ_drt, dJ_dtt = _score_grad_fpl_cost(rt, tt, fpl_p, fpl_gamma)
+        get_rt = _floored(task.running_cost_terms_f)
+        get_tt = _floored(task.terminal_cost_terms_f)
+        rt = get_rt(qpos, qvel, sensordata, controls)
+        tt = get_tt(qpos[:, -1], qvel[:, -1], sensordata[:, -1])
+        J, dJ_drt, dJ_dtt = _score_grad_fpl_cost(rt, tt, fpl_p, fpl_gamma, terminal_value)
     elif cost_mode == "fpl_discounted":
-        rt = task.running_cost_terms_f(qpos, qvel, sensordata, controls)
-        tt = task.terminal_cost_terms_f(qpos[:, -1], qvel[:, -1], sensordata[:, -1])
-        get_rt = task.running_cost_terms_f
-        get_tt = task.terminal_cost_terms_f
-        J, dJ_drt, dJ_dtt = _score_grad_fpl_discounted(rt, tt, fpl_p, fpl_gamma)
+        get_rt = _floored(task.running_cost_terms_f)
+        get_tt = _floored(task.terminal_cost_terms_f)
+        rt = get_rt(qpos, qvel, sensordata, controls)
+        tt = get_tt(qpos[:, -1], qvel[:, -1], sensordata[:, -1])
+        J, dJ_drt, dJ_dtt = _score_grad_fpl_discounted(rt, tt, fpl_p, fpl_gamma, terminal_value)
     else:
         raise ValueError(f"Unknown cost_mode: {cost_mode}")
 
@@ -408,7 +420,8 @@ def _knot_basis_matrix(tk, t_eval, spline_type):
 def gd_refine_topmu(backend, task, initial, controls, pre_scores, pre_states, pre_sensordata,
                     cost_mode, dt, fpl_p, fpl_gamma,
                     gd_iterations, gd_lr, num_refine, u_min, u_max,
-                    fd_eps=1e-6, flg_centered=1, use_sensor_jac_from_FD=False):
+                    fd_eps=1e-6, flg_centered=1, use_sensor_jac_from_FD=False,
+                    atom_floor=ATOM_FLOOR_LEGACY, terminal_value=False):
     """Refine the top-`num_refine` rollouts (lowest pre_scores) via BPTT-cost-GD.
 
     Returns refined_controls (K,H,nu), refined_states (K,H,ns),
@@ -444,6 +457,7 @@ def gd_refine_topmu(backend, task, initial, controls, pre_scores, pre_states, pr
          dJ_dq_T, dJ_dv_T, dJ_ds_T) = cost_and_grad(
             qpos_e, qvel_e, sensordata_e, controls_e,
             task, cost_mode, dt, fpl_p, fpl_gamma, fd_eps=fd_eps,
+            atom_floor=atom_floor, terminal_value=terminal_value,
         )
 
         dJ_dq = dJ_dq.copy(); dJ_dv = dJ_dv.copy(); dJ_ds = dJ_ds.copy()
@@ -524,8 +538,8 @@ def wrap_controller_with_gd_refine(ctrl, gd_iterations, gd_lr, num_refine=None,
                 qpos=qpos_pre, qvel=qvel_pre,
             )
             if self.use_fpl_cost or self.use_fpl_discounted:
-                traj_pre.running_terms_f = self.task.running_cost_terms_f(qpos_pre, qvel_pre, pre_sensordata, controls)
-                traj_pre.terminal_terms_f = self.task.terminal_cost_terms_f(qpos_pre[:, -1], qvel_pre[:, -1], pre_sensordata[:, -1])
+                traj_pre.running_terms_f = self._floor(self.task.running_cost_terms_f(qpos_pre, qvel_pre, pre_sensordata, controls))
+                traj_pre.terminal_terms_f = self._floor(self.task.terminal_cost_terms_f(qpos_pre[:, -1], qvel_pre[:, -1], pre_sensordata[:, -1]))
                 pre_scores = self._score_fpl(traj_pre)
             else:
                 traj_pre.running_terms = self.task.running_cost_terms(qpos_pre, qvel_pre, pre_sensordata, controls)
@@ -540,6 +554,8 @@ def wrap_controller_with_gd_refine(ctrl, gd_iterations, gd_lr, num_refine=None,
                 self.task.u_min, self.task.u_max,
                 fd_eps=fd_eps, flg_centered=flg_centered,
                 use_sensor_jac_from_FD=use_sensor_jac_from_FD,
+                atom_floor=self.fpl_atom_floor,
+                terminal_value=self.fpl_terminal_value,
             )
             controls = refined_controls
             states = refined_states
@@ -569,8 +585,8 @@ def wrap_controller_with_gd_refine(ctrl, gd_iterations, gd_lr, num_refine=None,
             qpos=qpos, qvel=qvel,
         )
         if self.use_fpl_cost or self.use_fpl_discounted:
-            traj.running_terms_f = self.task.running_cost_terms_f(qpos, qvel, sensordata, controls)
-            traj.terminal_terms_f = self.task.terminal_cost_terms_f(qpos[:, -1], qvel[:, -1], sensordata[:, -1])
+            traj.running_terms_f = self._floor(self.task.running_cost_terms_f(qpos, qvel, sensordata, controls))
+            traj.terminal_terms_f = self._floor(self.task.terminal_cost_terms_f(qpos[:, -1], qvel[:, -1], sensordata[:, -1]))
             traj.scores = self._score_fpl(traj)
         else:
             traj.running_terms = self.task.running_cost_terms(qpos, qvel, sensordata, controls)

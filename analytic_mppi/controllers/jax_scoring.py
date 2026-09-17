@@ -24,7 +24,8 @@ from typing import Optional, Sequence
 
 import jax.numpy as jnp
 
-from analytic_mppi.tasks.jax_costs._base import power_mean
+from analytic_mppi.tasks.jax_costs._base import (ATOM_FLOOR_LEGACY, discount_weights,
+                                                 floor_atoms, power_mean)
 
 
 def score_normal(running_terms, terminal_terms, *, dt: float):
@@ -50,7 +51,8 @@ def select_fpl_terms(running_f, terminal_f, term_indices: Sequence[int]):
 
 def score_fpl(running_f, terminal_f, *, mode: str, p: float, gamma: float,
               time_p: Optional[float] = None, time_discount: bool = False,
-              weights: Optional[Sequence[float]] = None):
+              weights: Optional[Sequence[float]] = None,
+              terminal_value: bool = False):
     """FPL cost = -log(reward). running_f (..., H, n_run), terminal_f (..., n_term).
 
     mode="fpl_cost": per-step power-mean over objectives, then discounted mean over
@@ -64,10 +66,12 @@ def score_fpl(running_f, terminal_f, *, mode: str, p: float, gamma: float,
         raise ValueError(f"n_term={n_term} > n_run={n_run}; expected n_term <= n_run")
 
     H1 = H + 1
-    discounts_full = gamma ** jnp.arange(H1)                      # (H+1,)
-    norm_full = (1.0 - gamma) / (1.0 - gamma ** H1)
-    discounts_run = gamma ** jnp.arange(H)                        # (H,)
-    norm_run = (1.0 - gamma) / (1.0 - gamma ** H) if H > 1 else 1.0
+    # Weights carry the normalization (mirrors sampling_base._score_fpl); `terminal_value`
+    # swaps the renormalized discounted mean for an explicit post-horizon tail (WO-3.3).
+    discounts_full = discount_weights(H1, gamma, terminal_value)  # (H+1,)
+    norm_full = 1.0
+    discounts_run = discount_weights(H, gamma, terminal_value)    # (H,)
+    norm_run = 1.0
 
     w = None if weights is None else jnp.asarray(weights)
 

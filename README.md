@@ -179,3 +179,30 @@ DIAL / Predictive Sampling), 4 tasks (pendulum, walker, cube, g1_standup),
 normal + FPL cost paths, and a unified CLI are in. Smoke tests cover legacy
 + all algorithms + both FPL modes. Next: new cost representations and
 domain-randomization hooks.
+
+## Upstream work & acknowledgements
+
+The Phase 5 (optional) **diffmjx** upgrade path — the informative-contact-gradient
+study that sits alongside the Phase 4 result, not on top of it — integrates three
+upstream projects. All closed-loop results reported in this repo run on stock
+`mujoco==3.5.0`; diffmjx is planning-side only and is deliberately kept in an
+isolated environment.
+
+- **[`martius-lab/mujoco`](https://github.com/martius-lab/mujoco)** — a fork of
+  Google DeepMind's [MuJoCo/MJX](https://github.com/google-deepmind/mujoco)
+  exposing Contact Force from a Distance (CFD) hooks for informative contact
+  gradients. The fork tracks upstream MuJoCo (currently 3.8.x), so it lives in
+  a separate venv and is not installable into the primary `analytic-mppi`
+  environment — that would silently drift the physics of record off the 3.5.0
+  pin behind every existing result.
+- **[`martius-lab/mjx_diffrax`](https://github.com/martius-lab/mjx_diffrax)** —
+  adaptive ODE integration (Tsit5, Dopri5, ...) for MJX built on
+  [diffrax](https://github.com/patrick-kidger/diffrax) by Patrick Kidger.
+- **[`a-paulus/softjax`](https://github.com/a-paulus/softjax)**
+  ([arXiv:2603.08824](https://arxiv.org/abs/2603.08824)) — soft differentiable
+  drop-in replacements for otherwise non-differentiable JAX ops (`argmax`,
+  `heaviside`, `abs`, `clip`, sort/quantile, ...).
+
+If diffmjx work lands here, its findings are reported alongside — never in
+place of — the stock-MuJoCo Phase 4 numbers. See `HANDOFF_PHASE5.md` and
+`NEXT_STEPS.md` §PHASE 5 for the runbook and gates (G12–G14).

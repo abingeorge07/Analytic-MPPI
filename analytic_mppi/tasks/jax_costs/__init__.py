@@ -29,6 +29,7 @@ JAX_COST_TASKS: frozenset[str] = frozenset({
     "walker",
     "g1_standup",
     "g1_walk",
+    "pendulum",
 })
 
 
@@ -52,16 +53,19 @@ def make_jax_costs(task: "Task"):
     from analytic_mppi.tasks.walker import WalkerTask
     from analytic_mppi.tasks.g1_standup import G1StandupTask
     from analytic_mppi.tasks.g1_walk import G1WalkTask
+    from analytic_mppi.tasks.pendulum import PendulumTask
 
     from .hopper import HopperJaxCosts
     from .walker import WalkerJaxCosts
     from .g1 import G1StandupJaxCosts, G1WalkJaxCosts
+    from .pendulum import PendulumJaxCosts
 
     registry = {
         HopperTask: HopperJaxCosts,
         WalkerTask: WalkerJaxCosts,
         G1StandupTask: G1StandupJaxCosts,
         G1WalkTask: G1WalkJaxCosts,
+        PendulumTask: PendulumJaxCosts,
     }
     cls = registry.get(type(task))
     if cls is None:

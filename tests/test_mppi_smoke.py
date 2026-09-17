@@ -101,15 +101,33 @@ def _algo_kwargs(name):
         # FplAdaptiveMPPI default steer_mode="binding" needs a per-objective FPL vector.
         "fpl_adaptive": dict(temperature=1.0, use_fpl_discounted=True, fpl_p=0.1,
                              fpl_gamma=0.99),
+        # The three remaining FPL samplers all key off the ABSOLUTE [0,1] fulfillment
+        # scale, so each needs an FPL cost mode rather than the normal quadratic sum.
+        # FplColoredMPPI: use_absolute_scale=True compares traj.reward against fulfil_ref.
+        "fpl_colored": dict(noise_level=0.5, temperature=1.0, use_fpl_cost=True,
+                            fpl_p=0.1, fpl_gamma=0.99),
+        # FplTemperedMPPI: fpl_calibrated=True modulates the target ESS by absolute u_best.
+        # `temperature` is still required by MPPIv2 even though this sampler solves for
+        # its own lambda each step -- it is the seed/fallback, not the operating value.
+        "fpl_tempered": dict(noise_level=0.5, temperature=1.0, use_fpl_cost=True,
+                             fpl_p=0.1, fpl_gamma=0.99),
+        # FplShieldedMPPI: requires per-atom running fulfillment plus an explicit
+        # safety/performance split. Pendulum's atoms are
+        # ["theta_fulfillment", "control_fulfillment"] -> upright is the safety atom,
+        # control economy is the performance atom.
+        "fpl_shielded": dict(noise_level=0.5, temperature=1.0, use_fpl_cost=True,
+                             fpl_p=0.1, fpl_gamma=0.99,
+                             safety_indices=[0], perf_indices=[1]),
     }[name]
 
 
 @pytest.mark.parametrize("algo_name", sorted(SAMPLING_CONTROLLERS))
 def test_pendulum_algorithm_runs(algo_name):
     """Each new algorithm produces finite actions for 30 closed-loop steps."""
-    if algo_name == "gradient_mpc":
+    if algo_name in ("gradient_mpc", "ilqr"):
         pytest.skip("not a sampler: needs an MJX backend + a jnp-cost task (pendulum "
-                    "has neither); covered by tests/test_gradient_mpc.py")
+                    "has neither); covered by tests/test_gradient_mpc.py / "
+                    "tests/test_ilqr.py")
     task = make_task("pendulum")
     backend = MujocoBackend(task.model_path, nthread=2)
     cls = SAMPLING_CONTROLLERS[algo_name]

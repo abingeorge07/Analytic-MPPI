@@ -40,7 +40,7 @@ from typing import Optional, Sequence
 
 import numpy as np
 
-from analytic_mppi.tasks.base import Task
+from analytic_mppi.tasks.base import ATOM_FLOOR_LEGACY, Task
 from analytic_mppi.tasks.jax_costs import make_jax_costs
 from .spline import interpolate, make_eval_times, make_knot_times, shift_plan
 
@@ -70,6 +70,10 @@ class GradientMPC:
         fpl_time_discount: bool = False,
         fpl_weights: Optional[Sequence[float]] = None,
         fpl_term_indices: Optional[Sequence[int]] = None,
+        # Lower clamp on the fulfillment atoms (WO-3.4). Mirrors sampling_base's kwarg of
+        # the same name so the sampling and gradient arms score an identical objective.
+        fpl_atom_floor: float = ATOM_FLOOR_LEGACY,
+        fpl_terminal_value: bool = False,
     ):
         import jax
         import jax.numpy as jnp
@@ -110,6 +114,11 @@ class GradientMPC:
         self.fpl_weights = None if fpl_weights is None else list(fpl_weights)
         self.fpl_term_indices = (None if fpl_term_indices is None
                                  else [int(i) for i in fpl_term_indices])
+        if not (0.0 < float(fpl_atom_floor) <= 1.0):
+            raise ValueError(
+                f"fpl_atom_floor must be in (0, 1], got {fpl_atom_floor}")
+        self.fpl_atom_floor = float(fpl_atom_floor)
+        self.fpl_terminal_value = bool(fpl_terminal_value)
 
         self.tk = make_knot_times(self.plan_horizon, self.num_knots)
         self.t_eval, self.H = make_eval_times(self.plan_horizon, float(backend.dt))
@@ -163,14 +172,17 @@ class GradientMPC:
             rt = self._costs.running_cost_terms(qpos_seq, qvel_seq, sd_seq, controls)
             tt = self._costs.terminal_cost_terms(qpos_seq[-1], qvel_seq[-1], sd_seq[-1])
             return self._scoring.score_normal(rt, tt, dt=float(self.backend.dt))
-        rf = self._costs.running_cost_terms_f(qpos_seq, qvel_seq, sd_seq, controls)
-        tf = self._costs.terminal_cost_terms_f(qpos_seq[-1], qvel_seq[-1], sd_seq[-1])
+        floor = self._scoring.floor_atoms
+        rf = floor(self._costs.running_cost_terms_f(qpos_seq, qvel_seq, sd_seq, controls),
+                   self.fpl_atom_floor)
+        tf = floor(self._costs.terminal_cost_terms_f(qpos_seq[-1], qvel_seq[-1], sd_seq[-1]),
+                   self.fpl_atom_floor)
         if self.fpl_term_indices is not None:
             rf, tf = self._scoring.select_fpl_terms(rf, tf, self.fpl_term_indices)
         return self._scoring.score_fpl(
             rf, tf, mode=self.mode, p=self.fpl_p, gamma=self.fpl_gamma,
             time_p=self.fpl_time_p, time_discount=self.fpl_time_discount,
-            weights=self.fpl_weights)
+            weights=self.fpl_weights, terminal_value=self.fpl_terminal_value)
 
     # ---- planner (the iLQG seam: override to replace the whole inner optimizer) ----
 

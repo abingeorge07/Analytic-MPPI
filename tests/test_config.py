@@ -283,6 +283,29 @@ def test_gradient_rejects_explicit_noise():
         resolve(cfg.with_(**{"proposal.noise_level": 0.7}))
 
 
+def test_ilqg_dispatch_resolves():
+    """("gradient", "ilqg") -> the ilqr controller (S10). Config-only: no jax."""
+    cfg = ExperimentConfig().with_(**{
+        "run.backend": "mjx", "proposal.kind": "gradient",
+        "proposal.num_samples": 1, "update.rule": "ilqg"})
+    assert resolve(cfg).controller == "ilqr"
+
+
+def test_ilqg_requires_mjx_backend():
+    cfg = ExperimentConfig().with_(**{
+        "proposal.kind": "gradient", "proposal.num_samples": 1, "update.rule": "ilqg"})
+    with pytest.raises(ConfigError, match="mjx"):
+        resolve(cfg)
+
+
+def test_ilqg_requires_single_sample():
+    cfg = ExperimentConfig().with_(**{
+        "run.backend": "mjx", "proposal.kind": "gradient",
+        "proposal.num_samples": 64, "update.rule": "ilqg"})
+    with pytest.raises(ConfigError, match="num_samples"):
+        resolve(cfg)
+
+
 def test_v1_provenance_json_still_loads():
     """SPEC_VERSION 1 records have no run.backend; from_dict must default it."""
     cfg = load_config_file("configs/env/hopper.py")

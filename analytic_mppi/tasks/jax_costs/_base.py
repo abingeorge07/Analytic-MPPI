@@ -30,6 +30,39 @@ def power_mean(terms, p: float, eps: float = 1e-8, weights=None):
     return (jnp.sum(w * t ** p, axis=-1)) ** (1.0 / p)
 
 
+ATOM_FLOOR_LEGACY = 1e-8
+ATOM_FLOOR_RECOMMENDED = 1e-3
+
+
+def floor_atoms(terms, floor: float = ATOM_FLOOR_LEGACY):
+    """Clamp fulfillment atoms into [floor, 1]. Mirrors tasks/base.py `floor_atoms`.
+
+    Note for the gradient arm: `jnp.clip` has zero derivative in the clamped region, so
+    a floored atom contributes no gradient. That is the intended behaviour — it is
+    exactly the divergence being removed — but it means a rollout with every atom pinned
+    is a flat spot, not a steep one. See REPO_STATE WO-3.4.
+    """
+    return jnp.clip(terms, floor, 1.0)
+
+
+def discount_weights(T: int, gamma: float, terminal_value: bool):
+    """Time-aggregation weights. Mirrors tasks/base.py `discount_weights`.
+
+    T/gamma/terminal_value are all jit-time CONSTANTS here (horizon and objective spec
+    are fixed for a given controller), so this builds a concrete array -- no tracing.
+    """
+    if T <= 0:
+        raise ValueError(f"T must be positive, got {T}")
+    # float ** int-array promotes to the default float dtype, so this is f32 in the
+    # production path and f64 under enable_x64 in the parity tests -- as intended.
+    d = gamma ** jnp.arange(T)
+    if not terminal_value:
+        norm = (1.0 - gamma) / (1.0 - gamma ** T) if T > 1 else 1.0
+        return d * norm
+    w = (1.0 - gamma) * d
+    return w.at[-1].set(gamma ** (T - 1))
+
+
 def soft_ramp(r, f_min: float = 0.05, tau: float = 0.5):
     """Strictly-monotone fulfillment ramp. Mirrors tasks/base.py:53-81."""
     r = jnp.asarray(r)

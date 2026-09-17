@@ -26,7 +26,8 @@ from typing import Optional, Sequence
 
 import numpy as np
 
-from analytic_mppi.tasks.base import Task, power_mean
+from analytic_mppi.tasks.base import (ATOM_FLOOR_LEGACY, Task, discount_weights,
+                                      floor_atoms, power_mean)
 from .spline import interpolate, make_eval_times, make_knot_times, shift_plan
 
 
@@ -118,6 +119,16 @@ class SamplingController:
         # entirely. False (default) reproduces every existing fpl_time_p result exactly
         # -- this only changes behavior for callers that opt in.
         fpl_time_discount: bool = False,
+        # Lower clamp applied to every fulfillment atom before scoring (WO-3.4). Needed
+        # only for fpl_p<0, where dM_p/dx_i diverges as the atom -> 0; at fpl_p=1 the
+        # derivative is w_i and no floor is required. Applied to BOTH arms regardless, or
+        # the floor itself becomes the FPL-vs-linear confound. Defaults to the legacy 1e-8
+        # that power_mean has always clipped at, so existing configs are unchanged.
+        fpl_atom_floor: float = ATOM_FLOOR_LEGACY,
+        # WO-3.3: replace the renormalized discounted mean over time with an explicit
+        # post-horizon tail term (hold the last in-horizon fulfillment). False reproduces
+        # every pre-existing result exactly. See tasks/base.discount_weights.
+        fpl_terminal_value: bool = False,
     ):
         if sum([bool(use_fpl_cost), bool(use_fpl_discounted), bool(use_fpl_layered),
                 bool(use_hybrid)]) > 1:
@@ -156,6 +167,27 @@ class SamplingController:
         self.use_hybrid = bool(use_hybrid)
         self.floor_weight = float(floor_weight)
         self.fpl_time_discount = bool(fpl_time_discount)
+        if not (0.0 < float(fpl_atom_floor) <= 1.0):
+            raise ValueError(
+                f"fpl_atom_floor must be in (0, 1], got {fpl_atom_floor}")
+        self.fpl_atom_floor = float(fpl_atom_floor)
+        self.fpl_terminal_value = bool(fpl_terminal_value)
+        # The terminal value acts on the TIME-AGGREGATION WEIGHTS. When fpl_time_p is set
+        # and fpl_time_discount is False, `_score_fpl` passes weights=None (an UNWEIGHTED
+        # soft-min over time), so those weights are never consulted and the flag would do
+        # nothing at all -- silently. That combination is the published hopper/walker spec,
+        # so a silent no-op there is the worst possible failure mode: it reads as
+        # "we applied the terminal-value fix and the results were unchanged".
+        # Invariant 11.5 (no silent fallbacks) -> refuse it at construction.
+        if (self.fpl_terminal_value and self.use_fpl_cost
+                and self.fpl_time_p is not None and not self.fpl_time_discount):
+            raise ValueError(
+                "fpl_terminal_value=True has no effect with fpl_time_p set and "
+                "fpl_time_discount=False: that path takes an UNWEIGHTED power-mean over "
+                "time, so the discount/terminal weights are never used. Either set "
+                "fpl_time_discount=True (weakest-moment AND discounted, with the tail), "
+                "or use fpl_time_p=None (discounted mean over time)."
+            )
         self.nu = int(task.nu)
 
         self.tk = make_knot_times(self.plan_horizon, self.num_knots)
@@ -228,17 +260,20 @@ class SamplingController:
             qpos=qpos, qvel=qvel,
         )
 
+        # Every fulfillment atom passes through `_floor` on its way into a Trajectory, so
+        # all five objective modes floor the SAME object (the atoms) rather than whatever
+        # each mode happens to hand to power_mean. See tasks/base.floor_atoms.
         if self.use_hybrid:
             # Needs BOTH representations: quadratic penalties for target terms,
             # fulfillments for the log-barrier floor terms.
             traj.running_terms = self.task.running_cost_terms(qpos, qvel, sensordata, controls)
             traj.terminal_terms = self.task.terminal_cost_terms(qpos[:, -1], qvel[:, -1], sensordata[:, -1])
-            traj.running_terms_f = self.task.running_cost_terms_f(qpos, qvel, sensordata, controls)
-            traj.terminal_terms_f = self.task.terminal_cost_terms_f(qpos[:, -1], qvel[:, -1], sensordata[:, -1])
+            traj.running_terms_f = self._floor(self.task.running_cost_terms_f(qpos, qvel, sensordata, controls))
+            traj.terminal_terms_f = self._floor(self.task.terminal_cost_terms_f(qpos[:, -1], qvel[:, -1], sensordata[:, -1]))
             traj.scores = self._score_hybrid(traj)
         elif self.use_fpl_cost or self.use_fpl_discounted:
-            rf = self.task.running_cost_terms_f(qpos, qvel, sensordata, controls)
-            tf = self.task.terminal_cost_terms_f(qpos[:, -1], qvel[:, -1], sensordata[:, -1])
+            rf = self._floor(self.task.running_cost_terms_f(qpos, qvel, sensordata, controls))
+            tf = self._floor(self.task.terminal_cost_terms_f(qpos[:, -1], qvel[:, -1], sensordata[:, -1]))
             if self.fpl_term_indices is not None:
                 rf, tf = self._select_fpl_terms(rf, tf)
             traj.running_terms_f = rf
@@ -246,10 +281,11 @@ class SamplingController:
             traj.scores = self._score_fpl(traj)
         elif self.use_fpl_layered:
             # Grouped fulfillment atoms (e.g. per-joint) + task.fpl_groups partition.
-            traj.running_terms_f = self.task.running_cost_terms_f_grouped(qpos, qvel, sensordata, controls)
-            traj.terminal_terms_f = self.task.terminal_cost_terms_f_grouped(
+            traj.running_terms_f = self._floor(
+                self.task.running_cost_terms_f_grouped(qpos, qvel, sensordata, controls))
+            traj.terminal_terms_f = self._floor(self.task.terminal_cost_terms_f_grouped(
                 qpos[:, -1], qvel[:, -1], sensordata[:, -1]
-            )
+            ))
             traj.scores = self._score_fpl_layered(traj)
         else:
             traj.running_terms = self.task.running_cost_terms(qpos, qvel, sensordata, controls)
@@ -271,6 +307,9 @@ class SamplingController:
         running  = traj.running_terms.sum(axis=(1, 2)) * dt   # (K,)
         terminal = traj.terminal_terms.sum(axis=-1)           # (K,)
         return running + terminal
+
+    def _floor(self, terms: np.ndarray) -> np.ndarray:
+        return floor_atoms(terms, self.fpl_atom_floor)
 
     def _select_fpl_terms(self, running_f: np.ndarray, terminal_f: np.ndarray):
         # Restrict the fulfillment atoms to self.fpl_term_indices before scoring.
@@ -374,10 +413,17 @@ class SamplingController:
             )
 
         H1 = H + 1
-        discounts_full = gamma ** np.arange(H1, dtype=np.float64)   # (H+1,)
-        norm_full = (1.0 - gamma) / (1.0 - gamma ** H1)
-        discounts_run = gamma ** np.arange(H,  dtype=np.float64)    # (H,)
-        norm_run = (1.0 - gamma) / (1.0 - gamma ** H) if H > 1 else 1.0
+        # Time-aggregation weights, already normalized. `terminal_value=False` is the
+        # legacy renormalized discounted mean; True adds an explicit post-horizon tail
+        # instead of assuming it equals the in-horizon average (WO-3.3). Both are convex
+        # combinations, so `reward` stays in [0,1] either way.
+        tv = self.fpl_terminal_value
+        w_full = discount_weights(H1, gamma, tv)                    # (H+1,)
+        w_run = discount_weights(H, gamma, tv)                      # (H,)
+        # Kept under the old names so the two aggregation sites below read unchanged:
+        # the weight vector now carries the normalization that `norm_*` used to apply.
+        discounts_full, norm_full = w_full, 1.0
+        discounts_run, norm_run = w_run, 1.0
 
         if self.use_fpl_cost:
             # Per-step scalar via power-mean (conjunction over objectives), then
@@ -471,8 +517,9 @@ class SamplingController:
                 f"layered FPL unavailable"
             )
         H1 = H + 1
-        discounts_full = gamma ** np.arange(H1, dtype=np.float64)   # (H+1,)
-        norm_full = (1.0 - gamma) / (1.0 - gamma ** H1)
+        # Same time-aggregation choice as _score_fpl (WO-3.3); weights carry the norm.
+        discounts_full = discount_weights(H1, gamma, self.fpl_terminal_value)   # (H+1,)
+        norm_full = 1.0
         # Per-atom discounted [0,1] value over the extended H+1 series (FQ-value analog).
         extended = np.concatenate([running, terminal[:, None, :]], axis=1)   # (K, H+1, n)
         per_term = (extended * discounts_full[:, None]).sum(axis=1) * norm_full  # (K, n)

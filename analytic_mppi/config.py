@@ -35,6 +35,7 @@ from typing import Any, Callable, Optional, Sequence
 
 from analytic_mppi.eval import (ALL_CONTROLLERS, init_barkour_stand, init_cube,
                                 init_g1_stand, init_hang_down, init_hopper_stand)
+from analytic_mppi.tasks.base import ATOM_FLOOR_LEGACY
 from analytic_mppi.tasks.jax_costs import JAX_COST_TASKS, has_jax_costs
 
 
@@ -186,9 +187,26 @@ class Objective(_Node):
     group_p: Optional[float] = None                # inner power mean (fpl_layered)
     term_indices: Optional[tuple[int, ...]] = None # restrict reward to a subset of atoms
     floor_weight: float = 1.0                      # hybrid log-barrier scale
+    # Lower clamp on every fulfillment atom before the power mean (WO-3.4 / NEXT_STEPS S1).
+    # Needed ONLY for p<0, where dM_p/dx_i diverges as x_i -> 0; at p=1 the derivative is
+    # just w_i. So it is applied to BOTH arms unconditionally -- a floor present only where
+    # it is numerically required IS the confound it exists to remove.
+    # Default is the legacy 1e-8 that power_mean has always clipped at, so every existing
+    # config and stored provenance record keeps its exact meaning; set 1e-3 to opt in.
+    atom_floor: float = ATOM_FLOOR_LEGACY
+    # WO-3.3: aggregate time as `(1-g) sum_{t<H} g^t r_t + g^H v(x_H)` (tail held at the
+    # last in-horizon value) instead of renormalizing by (1-g)/(1-g^H). The renormalization
+    # assumes post-horizon fulfillment equals the in-horizon AVERAGE, which a p=1 sum
+    # absorbs as a scale factor but a p<0 conjunction does not -- so it biases the FPL arm
+    # and not the linear one. False reproduces every pre-existing result exactly.
+    terminal_value: bool = False
 
     def __post_init__(self):
         _check(self.mode, COST_MODES, "objective.mode")
+        if not (0.0 < self.atom_floor <= 1.0):
+            raise ConfigError(
+                f"objective.atom_floor must be in (0, 1], got {self.atom_floor}"
+            )
         # gamma=1 makes the finite-horizon normaliser (1-g)/(1-g^H) a 0/0 -- mirrors the
         # assert in sampling_base.py, but fails at config-load time instead of mid-run.
         if not (0.0 <= self.gamma < 1.0):
@@ -304,8 +322,12 @@ _DISPATCH: dict[tuple[str, str], _Dispatch] = {
     # axes honestly: the "proposal" is the deterministic current mean, the update rule is
     # descent on it. noise_level/temperature at their defaults are dropped; set
     # explicitly they error (GradientMPC accepts neither) -- exactly the honesty this
-    # table exists for. A future iLQG arm is ("gradient", "ilqg").
+    # table exists for.
     ("gradient", "descent"):             _Dispatch("gradient_mpc"),
+    # Second-order sibling (S10): iLQR on the augmented accumulator state. Same
+    # deterministic single-plan semantics; deliberately NO temperature anywhere in its
+    # update -- that absence is Phase 4's whole point.
+    ("gradient", "ilqg"):                _Dispatch("ilqr"),
     ("cma",      "path_integral"):       _Dispatch("mppi_cma", noise_key="initial_noise_level"),
     ("cem",      "elite_mean"):          _Dispatch("cem", noise_key="sigma_start"),
     ("dial",     "path_integral"):       _Dispatch("dial"),
@@ -377,15 +399,16 @@ def _check_backend(cfg: ExperimentConfig, d: _Dispatch) -> None:
     still validates configs correctly (it fails at backend CONSTRUCTION with an install
     hint, not here with an ImportError).
     """
-    if d.controller == "gradient_mpc":
+    if d.controller in ("gradient_mpc", "ilqr"):
+        pair = f"{cfg.proposal.kind}+{cfg.update.rule}"
         if cfg.run.backend != "mjx":
             raise ConfigError(
-                "gradient+descent (gradient_mpc) differentiates through the MJX rollout; "
-                "set run.backend='mjx' (the CPU backend has no differentiable surface)."
+                f"{pair} ({d.controller}) differentiates through the MJX rollout; "
+                f"set run.backend='mjx' (the CPU backend has no differentiable surface)."
             )
         if cfg.proposal.num_samples != 1:
             raise ConfigError(
-                f"gradient+descent optimizes a single plan; proposal.num_samples must be "
+                f"{pair} optimizes a single plan; proposal.num_samples must be "
                 f"1, got {cfg.proposal.num_samples}. Set it explicitly so the config "
                 f"records what actually runs."
             )
@@ -462,6 +485,9 @@ def resolve(cfg: ExperimentConfig) -> Resolved:
         ("fpl_weights", cfg.objective.weights, _field_default(Objective, "weights")),
         ("fpl_group_p", cfg.objective.group_p, _field_default(Objective, "group_p")),
         ("fpl_term_indices", cfg.objective.term_indices, _field_default(Objective, "term_indices")),
+        ("fpl_atom_floor", cfg.objective.atom_floor, _field_default(Objective, "atom_floor")),
+        ("fpl_terminal_value", cfg.objective.terminal_value,
+         _field_default(Objective, "terminal_value")),
         ("floor_weight", cfg.objective.floor_weight, _field_default(Objective, "floor_weight")),
         ("temperature", cfg.update.temperature, _field_default(Update, "temperature")),
     ]

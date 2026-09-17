@@ -9,6 +9,7 @@ from __future__ import annotations
 import numpy as np
 
 from .sampling_base import SamplingController, Trajectory
+from analytic_mppi.tasks.base import ATOM_FLOOR_LEGACY
 
 
 class DIAL(SamplingController):
@@ -31,6 +32,8 @@ class DIAL(SamplingController):
         use_fpl_discounted: bool = False,
         fpl_p: float = 0.1,
         fpl_gamma: float = 0.99,
+        fpl_atom_floor: float = ATOM_FLOOR_LEGACY,
+        fpl_terminal_value: bool = False,
     ):
         if beta_opt_iter <= 0:
             raise ValueError("beta_opt_iter must be positive")
@@ -42,6 +45,8 @@ class DIAL(SamplingController):
             iterations=iterations, seed=seed,
             use_fpl_cost=use_fpl_cost, use_fpl_discounted=use_fpl_discounted,
             fpl_p=fpl_p, fpl_gamma=fpl_gamma,
+            fpl_atom_floor=fpl_atom_floor,
+            fpl_terminal_value=fpl_terminal_value,
         )
         self.noise_level = float(noise_level)
         self.temperature = float(temperature)

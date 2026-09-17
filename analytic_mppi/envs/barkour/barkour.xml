@@ -86,7 +86,11 @@
   </custom>
 
   <asset>
-    <hfield name="rand_uniform" file="hfield_240_280.png" size="20.1 20.0 .05 .1"/>
+    <!-- The upstream `rand_uniform` hfield asset was removed: its PNG
+         (hfield_240_280.png) was never vendored into this repo, and no geom references
+         it (the locomotion task uses the flat ground plane below). MuJoCo resolves asset
+         files at load time regardless of whether they are used, so leaving the
+         declaration made every quadruped task fail with "Error opening file". -->
     <mesh file="head.stl"/>
     <mesh file="powercable.stl"/>
     <mesh file="handle.stl"/>

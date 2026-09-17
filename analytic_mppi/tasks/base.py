@@ -50,6 +50,53 @@ def power_mean(terms: np.ndarray, p: float, eps: float = 1e-8,
     return (np.sum(w * t ** p, axis=-1)) ** (1.0 / p)
 
 
+
+
+ATOM_FLOOR_LEGACY = 1e-8
+#: The floor WO-3.4 / NEXT_STEPS S1 asks for. Opt in per-experiment; see `floor_atoms`.
+ATOM_FLOOR_RECOMMENDED = 1e-3
+
+
+def floor_atoms(terms: np.ndarray, floor: float = ATOM_FLOOR_LEGACY) -> np.ndarray:
+    return np.clip(terms, floor, 1.0)
+
+
+def discount_weights(T: int, gamma: float, terminal_value: bool) -> np.ndarray:
+    """Time-aggregation weights for a (..., T) series of fulfillments in [0, 1].
+
+    Both options are convex combinations (weights sum to exactly 1), so the aggregate
+    stays in [0, 1] and they differ ONLY in how the post-horizon tail is estimated.
+
+    `terminal_value=False` — the legacy renormalized discounted mean
+
+        (1-g)/(1-g^T) * sum_{t<T} g^t r_t
+
+    Renormalizing rather than adding a tail term silently assumes post-horizon
+    fulfillment equals the IN-HORIZON AVERAGE. That is optimistic, and it is not a
+    uniform optimism: a p=1 sum absorbs it as a scale factor, but a p<0 conjunction
+    weights low fulfillments heavily, so truncation distorts the COMPOSITION and biases
+    the FPL arm while leaving the linear arm alone (WO-3.3).
+
+    `terminal_value=True` — an explicit terminal estimate, tail held at r_{T-1}
+
+        (1-g) * sum_{t<T-1} g^t r_t  +  g^(T-1) * r_{T-1}
+
+    i.e. `FV = (1-g) sum_{t<H} g^t r_t + g^H v(x_H)` with the cheapest v: hold the last
+    in-horizon value forever. The weight on the final step is g^(T-1) rather than a
+    renormalized g^(T-1)(1-g)/(1-g^T), so an objective that is unsatisfied AT the horizon
+    stays unsatisfied in the aggregate instead of being averaged away.
+    """
+    if T <= 0:
+        raise ValueError(f"T must be positive, got {T}")
+    d = gamma ** np.arange(T, dtype=np.float64)
+    if not terminal_value:
+        norm = (1.0 - gamma) / (1.0 - gamma ** T) if T > 1 else 1.0
+        return d * norm
+    w = (1.0 - gamma) * d
+    w[-1] = gamma ** (T - 1)              # the tail term absorbs everything past T-1
+    return w
+
+
 def soft_ramp(r: np.ndarray, f_min: float = 0.05, tau: float = 0.5) -> np.ndarray:
     """A fulfillment ramp that is STRICTLY MONOTONE below its floor.
 
