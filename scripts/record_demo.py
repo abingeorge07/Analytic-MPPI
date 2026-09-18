@@ -37,49 +37,54 @@ from analytic_mppi.dynamics import MujocoBackend                      # noqa: E4
 from analytic_mppi.tasks import make_task                             # noqa: E402
 
 
-# Pendulum is NOT in _experiment.ENVS (that spec targets locomotion tasks).
-# Hand-tuned iLQR-friendly spec: horizon long enough for a full swing-up under
-# torque limit, few knots, linear spline (invariant per ILQRMPC docstring).
-PENDULUM_SPEC = dict(
-    task="pendulum",
-    horizon=1.0,
-    knots=5,
-    noise=0.5,       # for MPPI comparison only
-    temp=1.0,        # for MPPI comparison only
-    steps=250,       # 2.5 s at dt=0.01
-    difficulty_key=None,
-    difficulty=None,
-    time_p=None,     # unused with use_fpl_cost=False
-)
+# Specs for envs NOT in _experiment.ENVS (which targets only the locomotion set
+# hopper/walker/cube/quadruped). Hand-tuned; keys mirror _experiment.ENVS.
+_LOCAL_SPECS = {
+    "pendulum": dict(
+        task="pendulum", horizon=1.0, knots=5,
+        noise=0.5, temp=1.0, steps=250, time_p=-2.0,
+        difficulty_key=None, difficulty=None, init=None,
+    ),
+    "g1_standup": dict(
+        task="g1_standup", horizon=0.5, knots=5,
+        noise=0.4, temp=0.2, steps=750, time_p=-2.0,
+        difficulty_key="target_height", difficulty=1.0, init=None,
+    ),
+    "g1_walk": dict(
+        task="g1_walk", horizon=0.6, knots=6,
+        noise=0.4, temp=0.2, steps=750, time_p=-2.0,
+        difficulty_key="target_velocity", difficulty=0.5, init=None,
+    ),
+}
 
 
 def _spec(task_name: str) -> dict:
-    if task_name == "pendulum":
-        return PENDULUM_SPEC
+    if task_name in _LOCAL_SPECS:
+        return _LOCAL_SPECS[task_name]
     return _experiment.ENVS[task_name]
 
 
 def _cost_kwargs(task_name: str, arm: str, floor: float) -> dict:
-    """Match live_demo.cost_kwargs but add a `normal` arm for pendulum."""
-    if task_name == "pendulum":
-        if arm != "normal":
-            print(f"[demo] pendulum uses the normal (non-FPL) quadratic-style cost; "
-                  f"ignoring --arm {arm}", flush=True)
+    """FPL / linear / normal cost kwargs, per env."""
+    if arm == "normal":
         return dict(use_fpl_cost=False)
 
-    spec = _experiment.ENVS[task_name]
-    base = dict(use_fpl_cost=True, fpl_time_p=spec["time_p"], fpl_atom_floor=floor)
+    spec = _spec(task_name)
+    time_p = spec.get("time_p")
+    base = dict(use_fpl_cost=True, fpl_time_p=time_p, fpl_atom_floor=floor)
     if arm == "fpl":
         return dict(base, fpl_p=-1.0)
     if arm == "linear":
+        # linear_weights is only registered for hopper/walker/cube/quadruped;
+        # other envs need the linear arm plumbed manually if you want it.
         return dict(base, fpl_p=1.0, fpl_weights=_experiment.linear_weights(task_name, 1.0))
     raise ValueError(f"arm={arm!r} not valid for task={task_name!r}")
 
 
 def _build(args):
     spec = _spec(args.task)
-    if args.task == "pendulum":
-        task = make_task("pendulum")
+    if spec.get("difficulty_key") is None:
+        task = make_task(spec["task"])
     else:
         task = make_task(spec["task"], **{spec["difficulty_key"]: spec["difficulty"]})
 
@@ -139,7 +144,8 @@ def main() -> None:
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--task", default="pendulum",
-                   choices=["pendulum", "hopper", "walker"])
+                   choices=["pendulum", "hopper", "walker",
+                            "cube", "quadruped", "g1_standup", "g1_walk"])
     p.add_argument("--algo", default="ilqr",
                    choices=["mppi", "ilqr", "warm_ilqr"])
     p.add_argument("--arm", default="fpl",
@@ -150,7 +156,10 @@ def main() -> None:
     p.add_argument("--K", type=int, default=None,
                    help="samples per step; default 256 (mppi) / 128 (warm_ilqr)")
     p.add_argument("--steps", type=int, default=None,
-                   help="max steps; default = spec's episode length")
+                   help="max steps; default = spec's episode length (unless --duration set)")
+    p.add_argument("--duration", type=float, default=None,
+                   help="target seconds of sim (overrides --steps; computed as "
+                        "round(duration / backend.dt))")
     p.add_argument("--floor", type=float, default=1e-3,
                    help="atom floor (default 1e-3, the S12 campaign of record)")
     p.add_argument("--out", type=str, default=None,
@@ -172,7 +181,10 @@ def main() -> None:
     if spec.get("init") is not None:
         spec["init"](backend)
     state = backend.get_state()
-    steps = args.steps or spec["steps"]
+    if args.duration is not None:
+        steps = max(1, int(round(args.duration / float(backend.dt))))
+    else:
+        steps = args.steps or spec["steps"]
 
     import mujoco
     try:
@@ -180,8 +192,7 @@ def main() -> None:
     except ImportError as e:
         raise RuntimeError('Recording needs imageio. Install with: pip install -e ".[viz]"') from e
 
-    tag = args.arm if args.task != "pendulum" else "normal"
-    default_out = _REPO / "runs" / "demos" / f"{args.task}_{args.algo}_{tag}.mp4"
+    default_out = _REPO / "runs" / "demos" / f"{args.task}_{args.algo}_{args.arm}.mp4"
     out = Path(args.out) if args.out else default_out
     out.parent.mkdir(parents=True, exist_ok=True)
 

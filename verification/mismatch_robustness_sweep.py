@@ -31,6 +31,7 @@ import json
 import numpy as np
 
 from analytic_mppi.eval import Config, run_study, init_hopper_stand, make_task
+from analytic_mppi.tasks.base import ATOM_FLOOR_LEGACY, ATOM_FLOOR_RECOMMENDED
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _ci import mean_ci, wilson_ci  # noqa: E402
@@ -42,6 +43,11 @@ N_EPISODES = 30
 NUM_SAMPLES = 256
 TIME_P = -2.0
 FALL_UPRIGHT = 0.6
+# Atom floor. `ATOM_FLOOR_LEGACY` (1e-8) is the pre-WO-3.4 default that produced the
+# original mismatch_robustness figure; `ATOM_FLOOR_RECOMMENDED` (1e-3) is the G1 pin.
+# Kept as a module constant + tagged into every output filename so the floor-off
+# baseline is not silently overwritten when re-running floor-on. Set via CLI below.
+ATOM_FLOOR: float = ATOM_FLOOR_RECOMMENDED
 SHARED = dict(num_samples=NUM_SAMPLES, plan_horizon=0.6, num_knots=4, spline_type="zero")
 
 # Increasing traction loss (1.0 = nominal, smaller = slipperier).
@@ -50,13 +56,19 @@ LINEAR_WV = [0.5, 1.0, 2.0, 4.0]
 FPL_P = -1.0
 
 
+def _floor_tag(floor: float) -> str:
+    return f"floor{floor:g}"
+
+
 def build_configs():
     lin = [Config(f"lin wv={wv:g}", "mppi", "fpl_cost",
                   dict(noise_level=0.3, temperature=0.2,
-                       fpl_weights=[1.0, 1.0, wv, 0.5], fpl_time_p=TIME_P), fpl_p=1.0)
+                       fpl_weights=[1.0, 1.0, wv, 0.5], fpl_time_p=TIME_P,
+                       fpl_atom_floor=ATOM_FLOOR), fpl_p=1.0)
            for wv in LINEAR_WV]
     fpl = Config(f"FPL p={FPL_P:g}", "mppi", "fpl_cost",
-                 dict(noise_level=0.3, temperature=0.2, fpl_time_p=TIME_P), fpl_p=FPL_P)
+                 dict(noise_level=0.3, temperature=0.2, fpl_time_p=TIME_P,
+                      fpl_atom_floor=ATOM_FLOOR), fpl_p=FPL_P)
     return lin + [fpl]
 
 
@@ -72,6 +84,17 @@ def stats(res, task):
 
 
 def main():
+    global ATOM_FLOOR
+    import argparse
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--floor", type=float, default=ATOM_FLOOR_RECOMMENDED,
+                    help=f"fpl_atom_floor (default {ATOM_FLOOR_RECOMMENDED:g}; "
+                         f"pass {ATOM_FLOOR_LEGACY:g} to reproduce the legacy run)")
+    args = ap.parse_args()
+    ATOM_FLOOR = float(args.floor)
+    tag = _floor_tag(ATOM_FLOOR)
+    print(f"[mismatch_robustness_sweep] atom_floor={ATOM_FLOOR:g} tag={tag}", flush=True)
+
     task = make_task("hopper", target_velocity=TV)
     per_fr = {}
     for fr in FRICTIONS:
@@ -80,11 +103,12 @@ def main():
                           init_fn=init_hopper_stand, task_kwargs=dict(target_velocity=TV),
                           true_perturbation=pert, progress=False, **SHARED)
         per_fr[fr] = {l: stats(r, task) for l, r in study.items()}
-        print(f"friction={fr} done")
+        print(f"friction={fr} done", flush=True)
 
     fpl_label = f"FPL p={FPL_P:g}"
     print("\n" + "=" * 74)
-    print(f"HOPPER traction-loss robustness | K={NUM_SAMPLES} eps={N_EPISODES} | NO retuning")
+    print(f"HOPPER traction-loss robustness | K={NUM_SAMPLES} eps={N_EPISODES} | "
+          f"atom_floor={ATOM_FLOOR:g} | NO retuning")
     print("=" * 74)
     print(f"{'friction':>9s}  " + "  ".join(f"{l:>12s}" for l in per_fr[FRICTIONS[0]]))
     for fr in FRICTIONS:
@@ -92,12 +116,13 @@ def main():
                           for l in per_fr[fr])
         print(f"{fr:9.2f}  {cells}   (prod/surv)")
 
-    Path(__file__).resolve().parent.joinpath("mismatch_robustness_data.json").write_text(
+    here = Path(__file__).resolve().parent
+    here.joinpath(f"mismatch_robustness_data_{tag}.json").write_text(
         json.dumps({str(fr): per_fr[fr] for fr in FRICTIONS}, indent=2))
     robustness_figure(
         per_fr, fpl_label,
-        'Hopper under traction loss (planner uses nominal model, reality is slippery — NO retuning; 30 seeds, 95% CIs):\\none fixed FPL spec holds speed AND survival; no fixed linear weight does',
-        Path(__file__).resolve().parent / "mismatch_robustness.png")
+        f'Hopper under traction loss (atom_floor={ATOM_FLOOR:g}; planner uses nominal model, reality is slippery — NO retuning; 30 seeds, 95% CIs):\\none fixed FPL spec holds speed AND survival; no fixed linear weight does',
+        here / f"mismatch_robustness_{tag}.png")
 
 
 if __name__ == "__main__":

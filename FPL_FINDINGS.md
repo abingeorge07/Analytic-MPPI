@@ -46,6 +46,25 @@ The *best linear weight changes with the unknown friction* (wv=1 at nominal, wv=
 and none matches FPL. Video-verified: on slippery ground the aggressive linear hopper slips and
 inverts; FPL keeps hopping upright (`runs/hopper_slip_*.mp4`).
 
+**Follow-up (2026-09-18): mismatch sweep re-run at atom_floor=1e-3** (the G1 pin, previously the
+sweep hard-coded the pre-WO-3.4 floor-off path). Data:
+`verification/mismatch_robustness_data_floor0.001.json`; figure:
+`verification/mismatch_robustness_floor0.001.png`. Prod / survival, 30 seeds:
+
+| friction_scale | lin wv=1 | lin wv=2 | **FPL (fixed)** |
+|---|---|---|---|
+| 1.00 nominal | 0.20 / 0.93 | 0.27 / 0.47 | **0.67 / 0.67** |
+| 0.60 | 0.22 / 0.67 | 0.33 / 0.47 | **0.50 / 0.63** |
+| 0.45 | 0.07 / 0.33 | 0.38 / 0.53 | **0.70 / 0.80** |
+| 0.30 | 0.29 / 0.67 | 0.27 / 0.47 | **0.62 / 0.73** |
+
+The un-tunability + FPL-wins-every-friction claim is unchanged under the floor. Absolute FPL
+`prod` drops ~10–25% (0.79 → 0.67 nominal) because the floor softens the min-conjunction's
+ability to punish near-zero atoms — the same trade-off G1 identified. Best-linear identity
+still shifts with unknown friction (wv=2 at nominal + 0.45, wv=1 at 0.30). The structural
+claim ("one fixed FPL spec beats any fixed linear weight under an unknown aggression-punishing
+mismatch") survives cleanly.
+
 **Generalizes to a second robot (Walker2d running):**
 `verification/mismatch_robustness_walker.py` → `mismatch_robustness_walker.png`. Same setup, 30
 seeds. One fixed FPL spec holds productive speed ~1.1–1.2 at **100% survival across a 3.3×
@@ -409,6 +428,115 @@ this study writes to `checkpoints/s2_atom_floor/`, one file per floor (trial key
 contain the floor, so a shared file would silently serve floor-on trials from a floor-off
 cache — a false PASS).
 
+### G1 / G2 on non-hopper envs — walker + cube (2026-09-18)
+
+`s2_atom_floor_ab.py` grew a `--env` flag; each non-hopper env writes to a prefixed
+checkpoint file so results never collide. Ran walker and cube at floors 1e-8 (pre-WO-3.4
+incumbent) and 1e-3 (G1 pin), 16 seeds, all three studies (portability / sampler_race /
+zero_tuning). Quadruped skipped for compute reasons.
+
+**Walker — G1 PASS on both studies (CIs disjoint at both floors):**
+
+| study | floor | FPL prod | best-linear | GAP | separation |
+|---|---|---|---|---|---|
+| portability | 1e-8 | 1.169 ± 0.019 | 0.910 ± 0.090 (wv=8) | +0.26 | FPL CI clears best-linear CI |
+| portability | 1e-3 | 1.159 ± 0.024 | 0.997 ± 0.086 (wv=8) | +0.16 | FPL CI clears best-linear CI |
+| zero_tuning | 1e-8 | 1.197 ± 0.032 | 0.852 ± 0.169 (wv=8) | +0.35 | FPL CI clears best-linear CI |
+| zero_tuning | 1e-3 | 1.145 ± 0.032 | 0.921 ± 0.131 (wv=8) | +0.22 | FPL CI clears best-linear CI |
+
+The floor moves both FPL and best-linear (linear moves *toward* FPL more, so the gap
+narrows), but the FPL-clears-best-linear CI separation holds at both floors on both
+studies. Sampler race: FPL wins with every sampler, tight CIs (~1.03–1.09 both floors),
+best sampler at 1e-3 is `FPL.MPPI (white)` at 1.09 followed by `FPL.CEM` at 1.05.
+
+**Cube — mean-dominance PASS, CI-clearance PARTIAL (3/4 overlap):**
+
+| study | floor | FPL prod | best-linear | GAP | separation |
+|---|---|---|---|---|---|
+| portability | 1e-8 | 52.13 ± 2.86 | 37.58 ± 7.94 (wv=8) | +14.55 | **FPL CI clears best-linear CI** |
+| portability | 1e-3 | 50.09 ± 3.59 | 38.74 ± 7.92 (wv=8) | +11.35 | CIs overlap |
+| zero_tuning | 1e-8 | 51.97 ± 2.08 | 43.69 ± 14.12 (wv=2) | +8.27 | CIs overlap |
+| zero_tuning | 1e-3 | 52.73 ± 2.36 | 43.52 ± 14.02 (wv=2) | +9.21 | CIs overlap |
+
+FPL beats the mean of every best-linear cell by +8 to +15 rotation degrees, but cube's
+**linear-family CIs are 4–7× wider** than walker's — the linear-weight family is highly
+seed-sensitive on the in-hand manipulation task (some seeds drop the cube, others
+survive), so no linear weight has a tight CI to clear. FPL's own CI is comparable in
+absolute width to walker's (~2–4 units on a 50-unit scale, so tighter *relatively*).
+Sampler race is uniform: FPL wins with every sampler, CMA and colored samplers reach
+~55–58 with tight CIs, MPPI-white and CEM lag (~40 and ~20 respectively).
+
+**Verdict.** G1 (does the floor break FPL dominance?) is PASS on both envs: dominance
+of the mean holds at both floors on all four (study × env) cells; CI-clearance survives
+on 5 of 6 (all walker + cube portability 1e-8). The one CI-overlap that already existed
+at floor 1e-8 (cube zero_tuning) is not caused by the floor, and both cube cases at
+floor 1e-3 stay in the "FPL wins the mean by more than 2× its own CI half-width"
+territory. The G1 story (the floor is a numerical fix, not a conditioning artifact
+that FPL rides on) generalises past hopper to a second locomotion env and a
+non-locomotion manipulation env.
+
+Checkpoint files:
+- `verification/checkpoints/s2_atom_floor/walker_{portability,sampler_race,zero_tuning}_floor{1e-8,1e-3}.jsonl`
+- `verification/checkpoints/s2_atom_floor/cube_{portability,sampler_race,zero_tuning}_floor{1e-8,1e-3}.jsonl`
+
+Quadruped skipped this session (per-config cost ~10× hopper due to `steps=1500`);
+tracked as an open item.
+
+### G3 A→B asymmetry — mechanism (re-analysis, 2026-09-18)
+
+The A→B row of G3 moved the linear arm (`prod` −0.131 on portability) while leaving
+FPL essentially unchanged (Δ = +0.0004). The prior write-up flagged this as "no
+mechanism"; open item 4 in `HANDOFF_PHASE5.md`. Re-analyzing the existing
+`verification/checkpoints/s4_terminal_value/{portability,zero_tuning}_{A,B}.jsonl`
+by breaking the delta out **per linear weight** (no new experiments):
+
+| study | cfg | A prod | B prod | Δ (B−A) |
+|---|---|---|---|---|
+| portability | fpl | 0.7772 ± 0.11 | 0.7776 ± 0.14 | **+0.0004** |
+| portability | lin:0.5 | 0.3063 | 0.1543 | **−0.152** |
+| portability | lin:1.0 | 0.3675 | 0.2370 | **−0.131** |
+| portability | lin:2.0 | 0.2293 | 0.1772 | −0.052 |
+| portability | lin:4.0 | 0.1773 | 0.0394 | **−0.138** |
+| portability | lin:8.0 | 0 | 0 | 0 (dead both arms) |
+| zero_tuning | fpl | 0.7207 | 0.8050 | **+0.084** |
+| zero_tuning | lin:0.5 | 0.1432 | 0.1796 | +0.036 |
+| zero_tuning | lin:1 | 0.3076 | 0.3776 | +0.070 |
+| zero_tuning | lin:2 | 0.1314 | 0.0337 | −0.098 |
+| zero_tuning | lin:4 | 0.1352 | 0.0000 | **−0.135** |
+| zero_tuning | lin:8 | 0 | 0 | 0 (dead both arms) |
+
+**The drop is family-wide, not one weight's confounder.** On portability every live
+linear weight loses 0.05–0.15 of `prod` under B; on zero_tuning the aggressive
+weights (wv ≥ 2) drop hard while timid weights (wv ≤ 1) actually improve, giving
+the *appearance* of a movement that is really a **reweighting of who wins**
+inside the linear family under discount.
+
+**Mechanism (Jensen argument).** Under `time_discount=True`, the reward becomes
+`(1−γ)/(1−γᴴ) · Σₜ γᵗ · atomsₜ`, i.e. a reweighting of the per-step aggregation.
+
+* **FPL soft-min (`p=−1`)**: the power-mean tends to `min` as `p → −∞`; at `p=−2`
+  it is dominated by the *worst per-step atom*. Reweighting timesteps changes
+  which step is worst only when the ranking flips, and both timid and aggressive
+  plans keep the safety atoms near saturation. → FPL barely moves under discount
+  (portability +0.0004, zero_tuning +0.084 — the latter arguably a small
+  optimizer improvement, not a scoring difference).
+* **Linear (`p=1`)**: a strict weighted sum; reweighting *changes the score* even
+  when the ranking of atoms is preserved. Aggressive linear weights depend on
+  *tail rewards* (accumulated forward speed over the horizon); discounting
+  down-weights the tail, so aggressive plans that pay off late look worse.
+  Timid weights pay off in the first few steps (immediate stability), so they
+  are structurally *helped* by tail-discounting.
+
+**Bottom line:** the A→B "asymmetry" is not confounder-driven. It is a Jensen
+gap between `p=1` (linear responds linearly to time-aggregation weights) and
+`p=−1/-2` (FPL's soft-min responds only to atom levels, quasi-invariant to
+time reweighting). The published-config `time_discount=False` avoids the
+question entirely — G3's original verdict ("do not adopt discount, keep it off
+in closed-loop") stands, and the mechanism is now on the record.
+
+Re-analysis script: `/tmp/g3_reanalysis.py` (session-scratch; the analysis is
+one-shot and doesn't need to live in the tree). Data files unchanged.
+
 ## S9 additive-accumulator decomposition — GATE G7: **PASS**
 
 Every objective mode is now expressible as (additive stage cost in an augmented
@@ -635,10 +763,119 @@ three-line guard therefore still applies to the fork; any future diffmjx
 entry point in this workspace needs the same guard before its first `jax`
 import.
 
-**Follow-ups (only in the isolated venv, and only if the isolated study is
-pursued):** S14 (CFD + G13 gradient-sweep plot) and S15 (adaptive + softjax +
-G14 ablation). The kill criterion from `NEXT_STEPS.md` still applies —
-Phase 4 is publishable without any of this.
+## S14 diffmjx CFD — BLOCKED: hooks removed from fork HEAD
+
+Attempted 2026-09-18 per `NEXT_STEPS.md` §PHASE 5 lines 249–263. Before wiring
+any experiment: inspected the installed fork's Python API surface.
+
+**Blocker: the CFD implementation is gone from the fork's HEAD.**
+`mujoco.mjx._src.types.Option` in the installed fork exposes 18 stock upstream
+MuJoCo 3.13 fields (`iterations`, `ls_iterations`, `tolerance`, `impratio`,
+`gravity`, ..., `_impl`) and **zero** CFD-related fields — no `cfd_enable`,
+`cfd_solimp`, `col_soft_enable`, `softjax_mode`, or `scan_loop`. The CFD
+machinery lives only in a single historical commit:
+
+- `9099466a` — "Add differentiable contact features from diffmjx" (April 2026)
+
+Every commit after `9099466a` on the fork's tracked branch is stock upstream
+(MuJoCo Live, flex_node fields, 3.14 wheel hashes, sort/type refactors); the
+CFD-shaped diff was reverted / never merged into the branch the fork ships.
+
+**Consequence for the runbook.** S14 as specified in `NEXT_STEPS.md` cannot
+proceed on this fork state:
+
+- No `cfd_enable` field → no way to enable CFD from a Python client.
+- No `col_soft_enable` field → softjax's contact-differentiation angle also
+  blocked (softjax as a general JAX ops library still works, but the S14/S15
+  "informative contact gradient" story needs the collision-solver soft path).
+- The G13 gradient-sweep plot ("stock MJX vs FD vs CFD strength c") reduces to
+  "stock MJX vs FD" — the same plot upstream MJX shipped for years, no new
+  information.
+
+**Verdict: G13 not achievable on this fork revision.** Recording as an
+informative negative per the handoff's "FAIL = report the negative" clause on
+G14 and item 6 of `HANDOFF_PHASE5.md` §"Open items NOT in Phase 5 scope":
+> If G14's ablation shows diffmjx does NOT help speed, that is the informative
+> negative and should be reported.
+
+We have not even gotten to G14 — the CFD prerequisite for that ablation is
+absent. **Phase 4 stands as the paper result.**
+
+**What was NOT tried and why.** Checking out commit `9099466a` in the fork
+clone and reinstalling from there would recover the CFD API surface, but:
+(i) that commit is April 2026 while HEAD is 3.13-era Sept 2026, losing 100+
+downstream fixes; (ii) the Explore-agent survey flagged the CFD implementation
+as "half-finished" at that snapshot ("test orphaned", "col_soft_enable
+references nonexistent softjax smoothing logic", "unfinished refactoring per
+commit ced2cffd 'Fixed naming of softness variables'"); (iii) the reason CFD
+was removed from the fork's main branch is unknown to us and probably load-
+bearing. Decision left to the user (contact `martius-lab` or drop).
+
+## S15 diffmjx adaptive integration — scope reduced
+
+`mjx_diffrax` (adaptive Tsit5/Dopri5 integrators over MJX) is installable
+against **stock `mujoco-mjx>=3.2.0`** (see `mjx_diffrax/pyproject.toml`). This
+means the adaptive-integration axis of G14 is achievable **without** the
+CFD-stripped fork — installable directly into the primary `a-mppi/` venv on
+stock `mujoco==3.5.0`, no G12 fallout.
+
+**But** `mjx_diffrax`'s own README warns:
+
+> Upstream MJX's contact solver uses `jax.lax.while_loop`, which does not
+> support reverse-mode differentiation. Differentiating through contact-rich
+> simulations requires a modified MJX solver (e.g. using `jax.lax.scan` with
+> fixed iterations).
+
+The fork's HEAD contains a `_while_loop_scan` wrapper
+(`mujoco/mjx/mujoco/mjx/_src/solver.py:239`) that IS used at line 542 (line
+search), but the main outer solver loop at line 602 still uses
+`jax.lax.while_loop`. So the fork's HEAD is functionally stock 3.8 for reverse-
+mode purposes — no differentiability improvement over stock 3.5.0. The
+`jacfwd`-through-`mjx.step` path from Phase 3 (`mjx_manifold.transition_jacobians`)
+does still work in either.
+
+**Reduced G14: single-axis {adaptive integrator on/off}** on the G9 hopper
+suite. Kill criterion (`NEXT_STEPS.md` "Kill criteria" §) applied to the
+reduced scope: if adaptive-on doesn't speed up the G9-1 criterion, the
+informative-negative result is "diffmjx's adaptive integrator does not close
+G9-1's 9.8× → 20× gap."
+
+**Update (2026-09-18, same session): reduced-scope S15 also BLOCKED.** During
+the propagation check (`/home/abg309/PhD/RCL/diffmjx/s15_diffrax_propagation.py`),
+`jax.jacfwd(mjx_diffrax.step)` raises:
+
+> TypeError: can't apply forward-mode autodiff (jvp) to a custom_vjp function.
+
+`mjx_diffrax`'s only two shipped adjoint options — `RecursiveCheckpoint`
+(default) and `Backsolve` — are both `custom_vjp`-based, so `jacfwd` fails
+against either. Invariant 1 in `HANDOFF_PHASE5.md`
+(*"jacfwd, never jacrev, on mjx.step"*) forbids the alternative: reverse-mode
+breaks on MJX's contact solver `lax.while_loop`, silently on models big
+enough to reach it. `ILQRMPC`'s planner uses `jax.jacfwd` end-to-end
+(`analytic_mppi/controllers/ilqr.py:213`).
+
+**A 5-line local patch was drafted** to expose diffrax's forward-mode
+`DirectAdjoint` as a third `cfg.adjoint` option; it was **reverted per the
+user's call** rather than pursued (see `HANDOFF_PHASE5.md` "Don't do" #4 —
+Phase 5 must not be plumbed into `a-mppi/` without care, and patching an
+external dependency in-place carries the same maintainability risk).
+
+**Overall Phase 5 verdict: BLOCKED.**
+- G12 FAIL (fork breaks mujoco pin; accepted as isolated study).
+- G13 BLOCKED (CFD removed from fork HEAD; live only in flagged-half-finished
+  historical commit `9099466a`).
+- G14 BLOCKED (mjx_diffrax's shipped adjoints are `jacfwd`-incompatible; no
+  fork-independent workaround compatible with invariant 1).
+
+The runbook was written against a version of these upstream libraries that
+no longer ships in the required form. **Phase 4 remains the paper result
+without any diffmjx contribution.** Follow-ups if the diffmjx angle is
+revisited later:
+1. Contact `martius-lab` re: the reason CFD was removed from the fork's
+   tracked branch and the recommended snapshot.
+2. Upstream a `DirectAdjoint` option to `martius-lab/mjx_diffrax`.
+3. Reconsider whether informative contact gradients + adaptive integration
+   are still the right Phase-5 axes given the current library ecosystem.
 
 ## Open threads
 

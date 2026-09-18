@@ -42,7 +42,10 @@ import fpl_portability                                    # noqa: E402
 import fpl_sampler_race                                   # noqa: E402
 import fpl_zero_tuning                                    # noqa: E402
 
-ENV = "hopper"
+# Runtime-mutable via `--env` in main(); baked into every output filename so results
+# from different envs never collide in the checkpoint directory.
+ENV: str = "hopper"
+ENV_CHOICES = ("hopper", "walker", "quadruped", "cube")
 FLOORS = [ATOM_FLOOR_LEGACY, ATOM_FLOOR_RECOMMENDED]      # 1e-8 (incumbent) vs 1e-3
 OUT = Path(__file__).resolve().parent / "checkpoints" / "s2_atom_floor"
 
@@ -59,18 +62,20 @@ def _tag(floor: float) -> str:
 
 
 def _path(name: str, floor: float, tv: bool = False) -> Path:
-    """One checkpoint file per (study, floor, terminal_value). The `_tv` suffix is added
-    only when terminal_value is ON, so the floor-only files written for G1/G2 keep their
-    names and stay valid (they were all produced with terminal_value=False)."""
-    return OUT / f"{name}_floor{_tag(floor)}{'_tv' if tv else ''}.jsonl"
+    """One checkpoint file per (env, study, floor, terminal_value). The `_tv` suffix is
+    added only when terminal_value is ON. Hopper files keep their original names
+    (`{name}_floor{tag}[_tv].jsonl`) for compatibility with the pre-multi-env data;
+    non-hopper files are prefixed `{env}_` so envs never collide."""
+    prefix = "" if ENV == "hopper" else f"{ENV}_"
+    return OUT / f"{prefix}{name}_floor{_tag(floor)}{'_tv' if tv else ''}.jsonl"
 
 
 def run_study_at(mod, name: str, floor: float, tv: bool = False) -> Checkpoint:
-    """Run one study, hopper only, at one (floor, terminal_value), into its own file."""
+    """Run one study, pinned to the module-level `ENV`, at one (floor, terminal_value)."""
     _experiment.set_atom_floor(floor)
     _experiment.set_terminal_value(tv)
-    # Pin the study to hopper and redirect its checkpoint. Restored afterwards so
-    # importing this driver never leaves a study module mutated.
+    # Pin the study to the current env and redirect its checkpoint. Restored afterwards
+    # so importing this driver never leaves a study module mutated.
     saved = (mod.ENVS, mod.CKPT)
     mod.ENVS, mod.CKPT = [ENV], _path(name, floor, tv)
     try:
@@ -113,7 +118,7 @@ def _disjoint(a_lo, a_hi, b_lo, b_hi) -> bool:
 def report() -> None:
     lo, hi = FLOORS
     print("=" * 104)
-    print(f"GATE G1 — hopper, floor {lo:.0e} (incumbent) vs {hi:.0e}, "
+    print(f"GATE G1 — {ENV}, floor {lo:.0e} (incumbent) vs {hi:.0e}, "
           f"{len(fpl_portability.SEEDS)} seeds.  prod = achieved speed x survival.  CI = 95%.")
     print("=" * 104)
 
@@ -182,7 +187,7 @@ def sweep_report(floors: list[float]) -> None:
     and must be reported as one.
     """
     print("\n" + "=" * 104)
-    print("GATE G2 — FPL advantage vs the atom floor (hopper)")
+    print(f"GATE G2 — FPL advantage vs the atom floor ({ENV})")
     print("=" * 104)
     for mod, name in STUDIES:
         if name == "sampler_race":
@@ -244,8 +249,12 @@ def tv_report(floors: list[float]) -> None:
 
 
 def main(argv=None) -> None:
+    global ENV
     import argparse
     ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--env", choices=ENV_CHOICES, default=ENV,
+                    help=f"environment to run on (default: {ENV}). Each env writes to its "
+                         "own checkpoint file, so runs on different envs never collide.")
     ap.add_argument("--floors", nargs="+", type=float, default=None,
                     help="atom floors to run (default: the G1 A/B pair)")
     ap.add_argument("--studies", nargs="+", default=None,
@@ -257,6 +266,8 @@ def main(argv=None) -> None:
                          "GATE G3 floor x terminal_value table")
     ap.add_argument("--report-only", action="store_true")
     a = ap.parse_args(argv)
+    ENV = a.env
+    print(f"[s2_atom_floor_ab] env={ENV}", flush=True)
 
     floors = a.floors if a.floors else FLOORS
     studies = ([s for s in STUDIES if s[1] in set(a.studies)] if a.studies else STUDIES)
